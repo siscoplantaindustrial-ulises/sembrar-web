@@ -8,8 +8,8 @@ const waDisplay = WA_NUMBER.replace(/^549?(\d{3,4})(\d{2,3})(\d{4})$/, '+54 9 $1
 const marcas = ['Achilii','Agrometal', 'Apache','Ascanelli','Brioschi','Cele', 'Crucianelli','DASA', 'Dolby', 'Dumaire', 'Erca','Fabimag', 'Fankhauser', 'FerCam', 'Fran Kausen', 'Geronzi', 'Gherardi', 'Giorgi', 'Jumil', 'Malasia', 'Metar', 'Migra', 'Monumental', 'Pierobon', 'Pla', 'Schiarre', 'Sembrar', 'Super Walter', 'Surka', 'Tanzi', 'Tedeschi', 'Tefoni', 'Templar', 'VHB','Otra'];
 const semillas = ['Soja', 'Maíz', 'Girasol', 'Sorgo', 'Otra'];
 const formas = [{ l: 'Redonda', w: '18px' }, { l: 'Alargada', w: '40px' }, { l: 'No sé', w: '0px' }];
-const hileras = ['1', '2', '3', '4'];
-const alveolosQuick = ['30', '45', '60', '72', '90'];
+const hileras = ['1', '2'];
+const alveolosQuick = ['50', '56', '60', '66'];
 ---
 <!DOCTYPE html>
 <html lang="es">
@@ -245,6 +245,13 @@ input,select,button{font-family:inherit}
           <input name="localidad" class="field" placeholder="Localidad / provincia" aria-label="Localidad / provincia" style="flex:1 1 180px">
         </div>
       </div>
+
+      <div class="card">
+        <div class="step"><b>8</b><span>Plano de la pieza <span style="font-weight:500;color:#6a726b;font-size:15px">(opcional)</span></span></div>
+        <input type="file" name="plano" accept="application/pdf,image/png,image/jpeg,.pdf,.png,.jpg,.jpeg" aria-label="Plano de la pieza" style="font-size:15px;max-width:100%">
+        <div style="font-size:14px;color:#6a726b;margin-top:10px">PDF, PNG o JPG, hasta 4 MB. El link viaja en el mensaje de WhatsApp.</div>
+        <div id="plano-estado" role="status" style="font-size:14px;margin-top:8px;font-weight:600"></div>
+      </div>
     </div>
 
     <aside style="flex:1 1 320px;min-width:0;position:sticky;top:84px;background:#1d5628;color:#f6f2e8;border-radius:22px;padding:24px 22px">
@@ -297,6 +304,16 @@ const form = document.getElementById('pedido') as HTMLFormElement;
 const el = (name: string) => form.elements.namedItem(name) as HTMLInputElement;
 const pick = (group: string) => (form.querySelector(`[data-group="${group}"][aria-pressed="true"]`) as HTMLElement | null)?.dataset.value || '';
 
+let planoUrl = '';
+const MAX_PLANO = 4 * 1024 * 1024;
+const planoEstado = document.getElementById('plano-estado')!;
+const setPlano = (url: string, msg: string, ok = true) => {
+  planoUrl = url;
+  planoEstado.textContent = msg;
+  planoEstado.style.color = ok ? '#1d5628' : '#a12b2b';
+  update();
+};
+
 function update() {
   const v = (n: string) => el(n).value.trim();
   const noSe = el('noSe').checked;
@@ -317,6 +334,7 @@ function update() {
     `• Cantidad: ${cantidad} placa${cantidad === 1 ? '' : 's'}`,
   ];
   const datos = [v('nombre'), v('localidad')].filter(Boolean).join(' — ');
+  if (planoUrl) lines.push(`• Plano: ${planoUrl}`);
   if (datos) lines.push('', datos);
   const mensaje = lines.join('\n');
 
@@ -352,7 +370,25 @@ form.addEventListener('input', e => {
 });
 el('cantidad').addEventListener('change', () => { el('cantidad').value = String(Math.max(1, parseInt(el('cantidad').value) || 1)); update(); });
 
+el('plano').addEventListener('change', async () => {
+  const f = el('plano').files?.[0];
+  if (!f) return setPlano('', '');
+  if (f.size > MAX_PLANO) { el('plano').value = ''; return setPlano('', 'El archivo supera los 4 MB.', false); }
+  if (!/^(application\/pdf|image\/(png|jpeg))$/.test(f.type)) { el('plano').value = ''; return setPlano('', 'Solo PDF, PNG o JPG.', false); }
+  setPlano('', 'Subiendo…');
+  try {
+    const r = await fetch('/api/plano', { method: 'POST', body: f });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error);
+    setPlano(d.url, `Plano cargado: ${f.name}`);
+  } catch (err) {
+    el('plano').value = '';
+    setPlano('', (err as Error).message || 'No se pudo subir el archivo.', false);
+  }
+});
+
 form.addEventListener('reset', () => {
+  planoUrl = ''; planoEstado.textContent = '';
   form.querySelectorAll('[data-group]').forEach(x => x.setAttribute('aria-pressed', 'false'));
   setTimeout(update); // reset nativo aplica después del evento
 });
