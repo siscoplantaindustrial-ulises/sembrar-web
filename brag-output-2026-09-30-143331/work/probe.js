@@ -1,0 +1,11 @@
+const {chromium}=require('playwright-core');const serve=require('./serve');
+const EXE=process.env.LOCALAPPDATA+'/ms-playwright/chromium-1243/chrome-win64/chrome.exe';
+(async()=>{const s=await serve(8125);const b=await chromium.launch({executablePath:EXE});const p=await b.newPage({viewport:{width:400,height:711}});
+await p.goto('http://localhost:8125/');await p.evaluate(()=>document.fonts.ready);
+const r=await p.evaluate(()=>{const y=e=>Math.round(e.getBoundingClientRect().top+scrollY);const q=s=>document.querySelector(s);const o={H:document.documentElement.scrollHeight};
+for(const id of['inicio','producto','cotizador','contacto'])o[id]=y(document.getElementById(id));o.tipos=y(q('h3'));o.cards=[...document.querySelectorAll('#pedido .card')].map(c=>[y(c),Math.round(c.getBoundingClientRect().height)]);
+const a=q('#pedido aside');o.aside=[y(a),Math.round(a.getBoundingClientRect().height)];o.header=q('header').getBoundingClientRect().height;
+for(const s of['select[name=maquina]','[data-value=Soja]','[data-value=Redonda]','[data-group=hileras][data-value="2"]','[data-alveolos="60"]','input[name=m1]','button[data-step="1"]','#enviar'])o[s]=y(q(s));return o});
+console.log(JSON.stringify(r,null,0));
+for(const t of[0,r.tipos-70,r.cotizador,r.aside[0]-70])await p.evaluate(y=>scrollTo(0,y),t),await p.screenshot({path:`probe-${t}.png`});
+await b.close();s.close()})();

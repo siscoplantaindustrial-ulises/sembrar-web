@@ -1,0 +1,164 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;700;800&family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;width:720px;height:1280px;overflow:hidden;background:#1d5628;font-family:Figtree,sans-serif}
+#bg{position:absolute;inset:0;background:radial-gradient(700px 700px at 50% 0%,#276b33 0%,#1d5628 60%,#174520 100%)}
+#win{position:absolute;left:0;top:0;width:400px;height:711px;transform-origin:0 0;overflow:hidden;background:#f6f2e8;box-shadow:0 0 0 7px #0e2412,0 30px 80px rgba(0,0,0,.4)}
+iframe{display:block;width:400px;height:711px;border:0}
+.cap{position:absolute;left:50%;top:78px;white-space:nowrap;background:#f6e81d;color:#1d5628;font-family:Bitter,serif;font-weight:800;font-size:36px;line-height:1;padding:18px 32px 20px;border-radius:999px;box-shadow:0 10px 30px rgba(0,0,0,.28);opacity:0}
+.capL{left:40px;top:170px;width:572px;white-space:normal;font-size:52px;line-height:1.05;padding:30px 34px 34px;border-radius:28px}
+#tap{position:absolute;left:0;top:0;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:rgba(255,255,255,.55);border:3px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+#ripple{position:absolute;width:70px;height:70px;margin:-35px 0 0 -35px;border-radius:50%;border:4px solid #f6e81d;opacity:0}
+#dip{position:absolute;inset:0;background:#1d5628;opacity:0}
+#outro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#f6f2e8;opacity:0;padding:0 40px;text-align:center}
+#outro .logo{display:flex;align-items:center;gap:16px}
+#outro .mark{width:64px;height:64px;border-radius:50%;background:#f6f2e8;display:grid;place-items:center}
+#outro .mark b{width:24px;height:24px;border-radius:50%;background:#f6e81d;box-shadow:0 0 0 7px #1d5628 inset}
+#outro .name{font-family:Bitter,serif;font-weight:800;font-size:40px;letter-spacing:-.01em}
+#outro h1{font-family:Bitter,serif;font-weight:800;font-size:68px;line-height:1.04;letter-spacing:-.02em;margin:44px 0 48px}
+#outro .cta{background:#f6e81d;color:#1d5628;border-radius:999px;padding:20px 32px;font-weight:800;font-size:28px;display:flex;align-items:center;gap:14px}
+#outro .cta b{width:14px;height:14px;border-radius:50%;background:#009919}
+#outro .url{margin-top:40px;font-family:Bitter,serif;font-weight:700;font-size:40px;color:#f6f2e8;border-bottom:4px solid #f6e81d;padding-bottom:4px}
+#outro .num{font-family:Bitter,serif;font-weight:800;font-size:40px;margin-top:22px}
+</style></head><body>
+<div id="bg"></div>
+<div id="win"><iframe id="f" src="/"></iframe></div>
+<div class="cap" id="capA">Redondas y alargadas, a medida.</div>
+<div class="cap" id="capB">Elegí tu máquina y tu semilla</div>
+<div class="cap" id="capC">Hileras, alvéolos y medida</div>
+<div class="cap capL" id="capD">Tu mensaje se arma solo.</div>
+<div id="ripple"></div>
+<div id="tap"></div>
+<div id="dip"></div>
+<div id="outro">
+  <div class="logo"><span class="mark"><b></b></span><span class="name">Placas de Siembra</span></div>
+  <h1>La placa justa para cada semilla que sembrás.</h1>
+  <div><div class="cta"><b></b>Pedí tu presupuesto por WhatsApp</div><div class="num" id="num"></div></div>
+  <div class="url">placasdesiembra.com</div>
+</div>
+<script>
+const $ = s => document.querySelector(s);
+const cl = x => Math.max(0, Math.min(1, x));
+const seg = (t, a, b) => cl((t - a) / (b - a));
+const ease = x => x < .5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3) / 2;
+const out = x => 1 - Math.pow(1 - x, 3);
+const lerp = (a, b, k) => a + (b - a) * k;
+
+// ---- timeline data (iframe is a 400x711 phone viewport) ----
+const FULL = k => { const s = 1.8*k; return [360 - s*200, 640 - s*355.5, s]; };
+const FRAMED = [70, 215, 1.45];
+const ZOOM = [0, 0, 1.8];
+const winKF = [[0, FULL(1)], [3.5, FULL(1.03)], [4.25, FRAMED], [14.75, FRAMED], [15.5, ZOOM]];
+const scrollKF = [[0,0],[3.6,0],[5.0,1881,'e'],[6.5,1956,'l'],[7.5,3706,'e'],[8.3,3706],[8.6,3856,'e'],[9.0,3856],[9.75,4316,'e'],[10.75,4316],[11.5,4656,'e'],[14.75,4656],[15.5,5235,'e']];
+const caps = [['capA',5.0,6.6],['capB',7.5,10.5],['capC',10.75,14.5],['capD',15.4,18.0]];
+const plus = [13.0,13.25,13.5,13.75,14.0,14.25,14.5];
+const typed = {m1:[[11.8,'1'],[11.95,'12']], m2:[[12.3,'8']], m3:[[12.55,'5'],[12.65,'5,'],[12.75,'5,5']]};
+const focusWin = {m1:[11.75,12.25], m2:[12.25,12.5], m3:[12.5,13.0]};
+const moves = [
+  {at:3.5, dur:.55, sel:'#inicio a[href="#cotizador"]'},
+  {at:7.1, dur:.01, pos:[520, 1000]},
+  {at:7.75, dur:.5, sel:'select[name=maquina]', dx:-60},
+  {at:8.25, dur:.35, sel:'[data-group=semilla][data-value=Soja]'},
+  {at:8.75, dur:.35, sel:'[data-group=forma][data-value=Redonda]'},
+  {at:10.0, dur:.4, sel:'[data-group=hileras][data-value="2"]'},
+  {at:10.5, dur:.35, sel:'[data-alveolos="60"]'},
+  {at:11.75, dur:.4, sel:'input[name=m1]'},
+  {at:12.25, dur:.2, sel:'input[name=m2]'},
+  {at:12.5, dur:.2, sel:'input[name=m3]'},
+  {at:13.0, dur:.35, sel:'button[data-step="1"]'},
+  {at:16.5, dur:.6, sel:'#enviar', dx:30},
+];
+const clicks = [3.5,7.75,8.25,8.75,10.0,10.5,11.75,12.25,12.5,...plus,16.5];
+window.TIMELINE = {clicks, typing:[11.8,11.95,12.3,12.55,12.65,12.75], send:16.5, whoosh:[3.6,6.5,8.3,9.0,10.75,14.75], dip:18.0, duration:22};
+
+function kf(list, t) {
+  if (t <= list[0][0]) return list[0][1];
+  for (let i = 1; i < list.length; i++) if (t < list[i][0]) {
+    const [t0, v0] = list[i-1], [t1, v1, mode] = list[i];
+    let k = (t - t0) / (t1 - t0); k = mode === 'l' ? k : ease(k);
+    return Array.isArray(v0) ? v0.map((v, j) => lerp(v, v1[j], k)) : lerp(v0, v1, k);
+  }
+  return list[list.length-1][1];
+}
+
+let F, D, W;
+function formState(t) {
+  const q = s => D.querySelector(s);
+  q('select[name=maquina]').value = t >= 7.75 ? 'Crucianelli' : '';
+  const groups = {semilla:[8.25,'Soja'], forma:[8.75,'Redonda'], hileras:[10.0,'2']};
+  for (const g in groups) D.querySelectorAll(`[data-group=${g}]`).forEach(b =>
+    b.setAttribute('aria-pressed', String(t >= groups[g][0] && b.dataset.value === groups[g][1])));
+  q('input[name=alveolos]').value = t >= 10.5 ? '60' : '';
+  for (const n in typed) q(`input[name=${n}]`).value = (typed[n].filter(([tt]) => t >= tt).pop() || [0,''])[1];
+  q('input[name=cantidad]').value = String(1 + plus.filter(p => t >= p).length);
+  for (const n in focusWin) { const [a, b] = focusWin[n], on = t >= a && t < b;
+    const e = q(`input[name=${n}]`); e.style.borderColor = on ? '#1d5628' : ''; e.style.boxShadow = on ? '0 0 0 3px rgba(29,86,40,.25)' : ''; }
+  const pressT = seg(t, 16.5, 16.7);
+  q('#enviar').style.transform = `scale(${1 - .05*Math.sin(Math.PI*pressT)})`;
+  q('input[name=modelo]').dispatchEvent(new Event('input', {bubbles:true}));
+}
+function hero(t) {
+  const st = (sel, a, b, fn) => { const e = D.querySelector(sel), k = out(seg(t, a, b)); e.style.opacity = k; e.style.transform = fn(k); };
+  const box = D.querySelector('#inicio > div > div').children;
+  [[0,0.0],[1,0.18],[2,0.32],[3,0.46]].forEach(([i, a]) => { const e = box[i], k = out(seg(t, a, a+.55)); e.style.opacity = k; e.style.transform = `translateY(${(1-k)*28}px)`; });
+  st('#inicio .slot', .5, 1.1, k => `scale(${.94 + .06*k})`);
+}
+function place(t) {
+  const [tx, ty, s] = kf(winKF, t);
+  W.style.transform = `translate(${tx}px,${ty}px) scale(${s})`;
+  W.style.borderRadius = (34 * cl((1.8 - s) / .35)) + 'px';
+  F.contentWindow.scrollTo(0, Math.round(kf(scrollKF, t)));
+  return [tx, ty, s];
+}
+function targetPos(m) {
+  const [tx, ty, s] = place(m.at); formState(m.at);
+  const r = D.querySelector(m.sel).getBoundingClientRect();
+  return [tx + s*(r.left + r.width/2 + (m.dx||0)), ty + s*(r.top + r.height/2)];
+}
+let path;
+function cursorAt(t) {
+  let p = [760, 1300];
+  for (const m of path) {
+    if (t >= m.at) p = m.pos;
+    else if (t >= m.at - m.dur) { const k = ease(seg(t, m.at - m.dur, m.at)); p = [lerp(p[0], m.pos[0], k), lerp(p[1], m.pos[1], k)]; break; }
+    else break;
+  }
+  return p;
+}
+
+window.init = async () => {
+  F = $('#f'); W = $('#win');
+  if (!F.contentDocument || F.contentDocument.readyState !== 'complete') await new Promise(r => F.onload = r);
+  D = F.contentDocument;
+  const st = D.createElement('style'); st.textContent = 'html{scroll-behavior:auto!important}'; D.head.appendChild(st);
+  D.querySelectorAll('img').forEach(i => i.loading = 'eager');
+  await Promise.all([...D.images].map(i => i.complete ? 0 : new Promise(r => i.onload = i.onerror = r)));
+  await D.fonts.ready; await document.fonts.ready;
+  $('#num').textContent = D.querySelector('#contacto a span:last-child').textContent.trim();
+  path = moves.map(m => ({...m, pos: m.pos || targetPos(m)}));
+  return true;
+};
+
+window.renderAt = t => {
+  hero(t);
+  place(t);
+  formState(t);
+  for (const [id, a, b] of caps) { const e = $('#'+id), k = out(seg(t, a, a+.3)) * (1 - seg(t, b-.2, b));
+    e.style.opacity = k; e.style.transform = id === 'capD' ? `translateY(${(1-k)*-20}px)` : `translate(-50%, ${(1-k)*12}px)`; }
+  const [cx, cy] = cursorAt(t), c = $('#tap');
+  const last = clicks.filter(x => x <= t).pop() ?? -9, dt = t - last;
+  const vis = seg(t, 2.85, 3.0) * (1 - seg(t, 3.75, 3.95)) + seg(t, 7.1, 7.3) * (1 - seg(t, 17.3, 17.6));
+  c.style.opacity = vis;
+  c.style.left = cx + 'px'; c.style.top = cy + 'px';
+  c.style.transform = `scale(${dt < .18 ? 1 - .25*Math.sin(Math.PI*dt/.18) : 1})`;
+  const rp = $('#ripple'), rk = seg(dt, 0, .4);
+  rp.style.left = cx + 'px'; rp.style.top = cy + 'px';
+  rp.style.opacity = dt < .4 ? (1 - rk) * .9 * vis : 0; rp.style.transform = `scale(${.3 + rk})`;
+  $('#dip').style.opacity = out(seg(t, 18.0, 18.4));
+  const o = $('#outro');
+  [18.45, 18.7, 19.1, 19.4].forEach((a, i) => { const k = out(seg(t, a, a + .45)), e = o.children[i]; e.style.opacity = k; e.style.transform = `translateY(${(1-k)*24}px)`; });
+  o.style.opacity = t >= 18.3 ? 1 : 0;
+};
+</script>
+</body></html>
