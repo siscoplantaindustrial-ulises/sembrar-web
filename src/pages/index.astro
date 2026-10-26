@@ -5,11 +5,34 @@ const WA_NUMBER = '5493472505151';
 const waHref = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent('Hola! Quiero consultar por placas de siembra.')}`;
 const waDisplay = WA_NUMBER.replace(/^549?(\d{3,4})(\d{2,3})(\d{4})$/, '+54 9 $1 $2-$3');
 
-const marcas = ['Achilii','Agrometal', 'Apache','Ascanelli','Brioschi','Cele', 'Crucianelli','DASA', 'Dolby', 'Dumaire', 'Erca','Fabimag', 'Fankhauser', 'FerCam', 'Fran Kausen', 'Geronzi', 'Gherardi', 'Giorgi', 'Jumil', 'Malasia', 'Metar', 'Migra', 'Monumental', 'Pierobon', 'Pla', 'Schiarre', 'Sembrar', 'Super Walter', 'Surka', 'Tanzi', 'Tedeschi', 'Tefoni', 'Templar', 'VHB','Otra'];
+const marcas = ['Achillii','Agrometal', 'Apache','Ascanelli','Brioschi','Cele', 'Crucianelli','DASA', 'Dolby', 'Dumaire', 'Erca','Fabimag', 'Fankhauser', 'FerCam', 'Fran Kausen', 'Geronzi', 'Gherardi', 'Giorgi', 'Jumil', 'Malasia', 'Metar', 'Migra', 'Monumental', 'Pierobon', 'Pla', 'Schiarre', 'Sembrar', 'Super Walter', 'Surka', 'Tanzi', 'Tedeschi', 'Tefoni', 'Templar', 'VHB','Otra'];
 const semillas = ['Soja', 'Maíz', 'Girasol', 'Sorgo', 'Otra'];
 const formas = [{ l: 'Redonda', w: '18px' }, { l: 'Alargada', w: '40px' }, { l: 'No sé', w: '0px' }];
-const hileras = ['1', '2'];
-const alveolosQuick = ['50', '56', '60', '66'];
+const hileras = ['2', '3'];
+// Hileras fijas y cantidades de alvéolos disponibles según la semilla. "Otra" (o sin elegir) queda libre.
+const placasPorSemilla: Record<string, { hileras: string; alveolos: string[] }> = {
+  'Maíz': { hileras: '2', alveolos: ['50', '56', '60', '66'] },
+  'Girasol': { hileras: '2', alveolos: ['50', '56', '60'] },
+  'Sorgo': { hileras: '2', alveolos: ['124', '142'] },
+  'Soja': { hileras: '3', alveolos: ['141', '144', '171'] },
+};
+const alveolosLibres = ['50', '56', '60', '66'];
+
+// Medidas disponibles. Cada fila es [largo, ancho, espesor] (alargadas) o [diámetro, espesor] (redondas).
+// Con semilla (y tipo, en maíz) definidos se elige de esta lista; si no, se escribe a mano.
+const comb = (...cols: string[][]) => cols.reduce<string[][]>((acc, c) => acc.flatMap(a => c.map(x => [...a, x])), [[]]);
+const medidasPorTipo: Record<string, string[][]> = {
+  'Maíz alargado': [...comb(['11', '12', '13', '13,5', '14', '15'], ['7', '8', '9'], ['4,5', '5,5', '6']), ['12,5', '8', '4,5']],
+  'Maíz redondo': [['8', '5,5'], ['8', '6'], ...comb(['8,5', '9', '9,5', '10', '10,5', '11', '11,5', '12', '12,5', '13', '13,5', '14'], ['4,5', '5,5', '6'])],
+  'Girasol': [
+    ...comb(['10'], ['4', '5', '6'], ['3,3', '3,5']),
+    ...comb(['11', '12'], ['4', '5', '6', '7', '8'], ['3,3', '3,5']),
+    ...comb(['13'], ['5', '6', '7', '8'], ['3,3', '3,5']),
+    ['14', '6', '3,3'],
+  ],
+  'Sorgo': [['3,75', '2,5'], ['4,25', '2,5'], ['4,5', '2,5'], ['4,75', '2,5'], ['4,5', '3'], ['5', '3'], ['5,25', '3']],
+  'Soja': [['6,5', '5'], ['7', '5'], ['7,5', '5'], ['8,5', '5'], ['7', '5,5'], ['7,5', '5,5'], ['8', '5,5'], ['8,5', '5,5']],
+};
 ---
 <!DOCTYPE html>
 <html lang="es">
@@ -31,10 +54,18 @@ input,select,button{font-family:inherit}
 .field{min-height:52px;border:1.5px solid #d6cdb8;border-radius:12px;padding:0 14px;font-size:16px;background:#faf8f2;color:#1c261e}
 .field:disabled{opacity:0.5}
 .chip{background:#faf8f2;color:#1c261e;border:1.5px solid #d6cdb8;cursor:pointer}
+.chip:disabled{opacity:0.35;cursor:not-allowed}
 .chip[aria-pressed="true"]{background:#1d5628;color:#f6f2e8;border-color:#1d5628}
 .card{background:#fff;border:1px solid #e3dccb;border-radius:18px;padding:22px 20px}
+fieldset.card{margin:0;min-width:0}
+fieldset.card:disabled{opacity:0.45}
 .step{display:flex;align-items:center;gap:12px;margin-bottom:14px;font-weight:700;font-size:18px}
 .step b{width:28px;height:28px;border-radius:50%;background:#1d5628;color:#f6e81d;display:grid;place-items:center;font-weight:800;font-size:14px}
+#gl{display:block;width:100%;height:100%;cursor:grab}
+#gl:active{cursor:grabbing}
+.vbtn{font:600 13px/1 Figtree,system-ui,sans-serif;padding:9px 13px;border-radius:999px;border:1.5px solid rgba(246,242,232,0.35);background:none;color:#f6f2e8;cursor:pointer}
+.vbtn[aria-pressed="true"]{background:#f6e81d;border-color:#f6e81d;color:#1d5628}
+@media (min-width:840px){#resumen{max-height:calc(100vh - 100px);overflow-y:auto;scrollbar-width:none}#resumen::-webkit-scrollbar{display:none}}
 @media (max-width:720px){.nav-link{display:none}}
 @media (max-width:420px){.brand-text{font-size:16px!important}.nav-wa{padding:8px 12px!important;font-size:14px}}
 </style>
@@ -158,10 +189,10 @@ input,select,button{font-family:inherit}
   <h2 style="font-family:Bitter,serif;font-weight:800;font-size:clamp(30px,5vw,46px);line-height:1.06;letter-spacing:-0.015em;margin:12px 0 12px;color:#1d5628;text-wrap:balance">Armá tu pedido en un minuto</h2>
   <p style="font-size:18px;line-height:1.55;margin:0 0 32px;max-width:600px;color:#4a544b;text-wrap:pretty">Tocá las opciones y te armamos el mensaje. Si no sabés algún dato, dejalo en blanco: lo vemos juntos por WhatsApp.</p>
 
-  <form id="pedido" data-wa={WA_NUMBER} style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start">
+  <form id="pedido" data-wa={WA_NUMBER} data-placas={JSON.stringify(placasPorSemilla)} data-libres={JSON.stringify(alveolosLibres)} data-medidas={JSON.stringify(medidasPorTipo)} style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start">
     <div style="flex:1 1 440px;min-width:0;display:grid;gap:14px">
 
-      <div class="card">
+      <fieldset class="card" data-paso="1" disabled>
         <div class="step"><b>1</b>¿Qué sembradora tenés?</div>
         <div style="display:flex;flex-wrap:wrap;gap:10px">
           <select name="maquina" class="field" aria-label="Marca" style="flex:1 1 180px">
@@ -170,18 +201,18 @@ input,select,button{font-family:inherit}
           </select>
           <input name="modelo" class="field" placeholder="Modelo (opcional)" aria-label="Modelo" style="flex:1 1 180px">
         </div>
-      </div>
+      </fieldset>
 
-      <div class="card">
+      <fieldset class="card" data-paso="2" disabled>
         <div class="step"><b>2</b>¿Qué vas a sembrar?</div>
         <div style="display:flex;flex-wrap:wrap;gap:8px">
           {semillas.map(s => (
             <button type="button" class="chip" data-group="semilla" data-value={s} aria-pressed="false" style="min-height:46px;padding:0 18px;border-radius:999px;font-size:16px;font-weight:600">{s}</button>
           ))}
         </div>
-      </div>
+      </fieldset>
 
-      <div class="card">
+      <fieldset class="card" data-paso="3" disabled>
         <div class="step"><b>3</b>¿Redonda o alargada?</div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
           {formas.map(f => (
@@ -191,29 +222,39 @@ input,select,button{font-family:inherit}
             </button>
           ))}
         </div>
-      </div>
+      </fieldset>
 
-      <div class="card">
+      <fieldset class="card" data-paso="4" disabled>
         <div class="step"><b>4</b>Hileras y alvéolos</div>
-        <div style="font-size:14px;font-weight:600;color:#4a544b;margin-bottom:8px">Hileras</div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px">
-          {hileras.map(h => (
-            <button type="button" class="chip" data-group="hileras" data-value={h} aria-pressed="false" style="min-width:56px;min-height:48px;padding:0 16px;border-radius:12px;font-size:17px;font-weight:700">{h}</button>
-          ))}
+        <div id="hileras-libre">
+          <div style="font-size:14px;font-weight:600;color:#4a544b;margin-bottom:8px">Hileras</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px">
+            {hileras.map(h => (
+              <button type="button" class="chip" data-group="hileras" data-value={h} aria-pressed="false" style="min-width:56px;min-height:48px;padding:0 16px;border-radius:12px;font-size:17px;font-weight:700">{h}</button>
+            ))}
+          </div>
+        </div>
+        <div id="hileras-fija" hidden style="font-size:15px;font-weight:600;color:#4a544b;margin-bottom:18px">
+          Hileras: <span id="hileras-n" style="font-family:Bitter,serif;font-weight:800;font-size:20px;color:#1d5628"></span>
+          <span style="font-weight:400;color:#6a726b"> · fijas para esta semilla</span>
         </div>
         <div style="font-size:14px;font-weight:600;color:#4a544b;margin-bottom:8px">Alvéolos por placa</div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
           <input name="alveolos" class="field" inputmode="numeric" placeholder="Ej. 60" aria-label="Alvéolos por placa" style="width:120px;min-height:48px;font-size:17px;font-weight:700">
-          <span style="font-size:14px;color:#6a726b">o elegí:</span>
-          {alveolosQuick.map(a => (
-            <button type="button" class="chip" data-alveolos={a} aria-pressed="false" style="min-height:44px;padding:0 14px;border-radius:999px;font-size:15px;font-weight:600">{a}</button>
-          ))}
+          <span id="alv-o" style="font-size:14px;color:#6a726b">o elegí:</span>
+          <div id="alv-chips" style="display:flex;flex-wrap:wrap;gap:8px"></div>
         </div>
-      </div>
+      </fieldset>
 
-      <div class="card">
+      <fieldset class="card" data-paso="5" disabled>
         <div class="step" style="margin-bottom:6px"><b>5</b>Medida de la placa</div>
         <div style="font-size:14px;color:#6a726b;margin:0 0 12px 40px">Suele estar grabada en la placa que usás hoy.</div>
+        <div id="medida-lista" hidden>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            {['s1', 's2', 's3'].map(n => <select name={n} class="field" style="flex:1 1 130px;font-weight:600"></select>)}
+          </div>
+        </div>
+        <div id="medida-libre">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
           {['12', '8', '5,5'].map((ph, i) => (
             <>
@@ -222,13 +263,14 @@ input,select,button{font-family:inherit}
             </>
           ))}
         </div>
+        </div>
         <label style="margin-top:14px;display:flex;align-items:center;gap:10px;padding:6px 0;cursor:pointer;font-size:16px">
           <input type="checkbox" name="noSe" style="flex:none;width:24px;height:24px;margin:0;accent-color:#1d5628">
           No sé la medida — mando foto de mi placa por WhatsApp
         </label>
-      </div>
+      </fieldset>
 
-      <div class="card">
+      <fieldset class="card" data-paso="6" disabled>
         <div class="step"><b>6</b>¿Cuántas placas?</div>
         <div style="display:flex;align-items:center;border:1.5px solid #d6cdb8;border-radius:14px;width:max-content;overflow:hidden;background:#faf8f2">
           <button type="button" data-step="-1" aria-label="Menos" style="width:56px;height:56px;border:none;background:none;font-size:26px;font-weight:600;color:#1d5628;cursor:pointer">−</button>
@@ -236,25 +278,37 @@ input,select,button{font-family:inherit}
           <button type="button" data-step="1" aria-label="Más" style="width:56px;height:56px;border:none;background:none;font-size:26px;font-weight:600;color:#1d5628;cursor:pointer">+</button>
         </div>
         <div style="font-size:14px;color:#6a726b;margin-top:10px">Una por cada cuerpo de siembra de tu máquina.</div>
-      </div>
+      </fieldset>
 
-      <div class="card">
+      <fieldset class="card" data-paso="7" disabled>
         <div class="step"><b>7</b><span>Tus datos <span style="font-weight:500;color:#6a726b;font-size:15px">(opcional)</span></span></div>
         <div style="display:flex;flex-wrap:wrap;gap:10px">
           <input name="nombre" class="field" placeholder="Nombre" aria-label="Nombre" style="flex:1 1 180px">
           <input name="localidad" class="field" placeholder="Localidad / provincia" aria-label="Localidad / provincia" style="flex:1 1 180px">
         </div>
-      </div>
+      </fieldset>
 
-      <div class="card">
+      <fieldset class="card" data-paso="8" disabled>
         <div class="step"><b>8</b><span>Plano de la pieza <span style="font-weight:500;color:#6a726b;font-size:15px">(opcional)</span></span></div>
         <input type="file" name="plano" accept="application/pdf,image/png,image/jpeg,.pdf,.png,.jpg,.jpeg" aria-label="Plano de la pieza" style="font-size:15px;max-width:100%">
         <div style="font-size:14px;color:#6a726b;margin-top:10px">PDF, PNG o JPG, hasta 4 MB. El link viaja en el mensaje de WhatsApp.</div>
         <div id="plano-estado" role="status" style="font-size:14px;margin-top:8px;font-weight:600"></div>
-      </div>
+      </fieldset>
     </div>
 
-    <aside style="flex:1 1 320px;min-width:0;position:sticky;top:84px;background:#1d5628;color:#f6f2e8;border-radius:22px;padding:24px 22px">
+    <aside id="resumen" style="flex:1 1 320px;min-width:0;position:sticky;top:84px;background:#1d5628;color:#f6f2e8;border-radius:22px;padding:24px 22px">
+      <div style="font-size:13px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#f6e81d">Vista previa</div>
+      <div id="visor" style="margin:14px 0 22px">
+        <div style="height:clamp(190px,32vh,320px);width:100%"><canvas id="gl" aria-label="Vista 3D de la placa. Arrastrá para girar, rueda o pellizco para acercar."></canvas></div>
+        <div role="group" aria-label="Vistas" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:10px">
+          <button type="button" class="vbtn" data-view="perspectiva" aria-pressed="true">Perspectiva</button>
+          <button type="button" class="vbtn" data-view="planta" aria-pressed="false">Planta</button>
+          <button type="button" class="vbtn" data-view="canto" aria-pressed="false">Canto</button>
+          <button type="button" class="vbtn" data-view="alveolo" aria-pressed="false">Alvéolo</button>
+          <button type="button" class="vbtn" id="spinBtn" aria-pressed="false">Girar placa</button>
+        </div>
+        <div style="font-size:12px;opacity:0.75;text-align:center;margin-top:8px">Arrastrá para girar · rueda o pellizco para zoom · clic derecho para mover</div>
+      </div>
       <div style="font-size:13px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#f6e81d">Tu mensaje</div>
       <div id="mensaje" aria-live="polite" style="margin-top:14px;background:#f6f2e8;color:#1c261e;border-radius:16px 16px 16px 4px;padding:16px 18px;font-size:15px;line-height:1.6;white-space:pre-wrap;word-break:break-word"></div>
       <div id="faltan" style="margin-top:14px;font-size:14px;line-height:1.5;background:rgba(0,153,25,0.75);color:#fff;border-radius:12px;padding:10px 14px"></div>
@@ -300,9 +354,18 @@ input,select,button{font-family:inherit}
 </a>
 
 <script>
+import type { PlacaInput } from '../placa3d';
 const form = document.getElementById('pedido') as HTMLFormElement;
 const el = (name: string) => form.elements.namedItem(name) as HTMLInputElement;
 const pick = (group: string) => (form.querySelector(`[data-group="${group}"][aria-pressed="true"]`) as HTMLElement | null)?.dataset.value || '';
+
+const placas: Record<string, { hileras: string; alveolos: string[] }> = JSON.parse(form.dataset.placas!);
+const libres: string[] = JSON.parse(form.dataset.libres!);
+const medidas: Record<string, string[][]> = JSON.parse(form.dataset.medidas!);
+const medidaLibre = document.getElementById('medida-libre')!, medidaLista = document.getElementById('medida-lista')!;
+const alvChips = document.getElementById('alv-chips')!, alvO = document.getElementById('alv-o')!;
+const hilerasLibre = document.getElementById('hileras-libre')!, hilerasFija = document.getElementById('hileras-fija')!, hilerasN = document.getElementById('hileras-n')!;
+let chipsDe: string | null = null; // semilla para la que están dibujados los chips de alvéolos
 
 let planoUrl = '';
 const MAX_PLANO = 4 * 1024 * 1024;
@@ -319,9 +382,63 @@ function update() {
   const noSe = el('noSe').checked;
   const [m1, m2, m3] = ['m1', 'm2', 'm3'].map(v);
   ['m1', 'm2', 'm3'].forEach(n => (el(n).disabled = noSe));
-  const semilla = pick('semilla'), forma = pick('forma'), hileras = pick('hileras'), alveolos = v('alveolos');
+  const semilla = pick('semilla');
+  // Soja y sorgo no existen alargadas; girasol no existe redonda. Maíz y "Otra" admiten todas.
+  const noExiste = semilla === 'Soja' || semilla === 'Sorgo' ? 'Alargada' : semilla === 'Girasol' ? 'Redonda' : '';
+  form.querySelectorAll<HTMLButtonElement>('[data-group="forma"]').forEach(b => {
+    b.disabled = b.dataset.value === noExiste;
+    if (b.disabled) b.setAttribute('aria-pressed', 'false');
+  });
+  // Hileras y alvéolos: fijos para soja/maíz/girasol/sorgo; libres para "Otra" o sin semilla.
+  const cfg = placas[semilla];
+  const opciones = cfg?.alveolos ?? libres;
+  if (chipsDe !== semilla) {
+    chipsDe = semilla;
+    alvChips.replaceChildren(...opciones.map(a => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'chip'; b.dataset.alveolos = a; b.setAttribute('aria-pressed', 'false'); b.textContent = a;
+      b.style.cssText = 'min-height:44px;padding:0 14px;border-radius:999px;font-size:15px;font-weight:600';
+      return b;
+    }));
+    if (cfg && !cfg.alveolos.includes(el('alveolos').value)) el('alveolos').value = '';
+  }
+  el('alveolos').hidden = alvO.hidden = !!cfg;
+  hilerasLibre.hidden = !!cfg; hilerasFija.hidden = !cfg;
+  if (cfg) hilerasN.textContent = cfg.hileras;
+  const forma = pick('forma'), hileras = cfg ? cfg.hileras : pick('hileras'), alveolos = v('alveolos');
   const cantidad = Math.max(1, parseInt(v('cantidad')) || 1);
-  const medida = noSe ? 'No la sé, te mando foto' : ([m1, m2, m3].some(Boolean) ? [m1 || '?', m2 || '?', m3 || '?'].join('x') : '');
+
+  // Medida: con semilla (y tipo, en maíz) definidos se elige de una lista en cascada (cada select depende de los anteriores).
+  const lista = medidas[semilla === 'Maíz' ? (forma === 'Redonda' ? 'Maíz redondo' : forma === 'Alargada' ? 'Maíz alargado' : '') : semilla];
+  medidaLibre.hidden = !!lista; medidaLista.hidden = !lista;
+  let partes = [m1, m2, m3];
+  if (lista) {
+    const n = lista[0].length;
+    const nombres = n === 3 ? ['Largo', 'Ancho', 'Espesor'] : ['Diámetro', 'Espesor'];
+    const orden = (a: string, b: string) => parseFloat(a.replace(',', '.')) - parseFloat(b.replace(',', '.'));
+    let filas = lista;
+    partes = [];
+    ['s1', 's2', 's3'].forEach((name, k) => {
+      const s = el(name);
+      s.hidden = k >= n;
+      if (k >= n) { s.value = ''; return; }
+      const opts = [...new Set(filas.map(r => r[k]))].sort(orden);
+      const key = `${nombres[k]}|${opts.join('|')}`;
+      if (s.dataset.k !== key) {
+        const actual = s.value;
+        s.dataset.k = key;
+        s.replaceChildren(new Option(`${nombres[k]} (mm)`, ''), ...opts.map(o => new Option(o, o)));
+        s.value = opts.includes(actual) ? actual : '';
+      }
+      if (k > 0 && !partes[k - 1]) s.value = '';
+      s.setAttribute('aria-label', nombres[k]);
+      s.disabled = noSe || (k > 0 && !partes[k - 1]);
+      partes.push(s.value);
+      if (s.value) filas = filas.filter(r => r[k] === s.value);
+    });
+  }
+  const medidaOk = noSe || (lista ? partes.every(Boolean) : partes.some(Boolean));
+  const medida = noSe ? 'No la sé, te mando foto' : (partes.some(Boolean) ? partes.map(x => x || '?').join('x') : '');
   const maq = [v('maquina'), v('modelo')].filter(Boolean).join(' ');
 
   const lines = [
@@ -346,7 +463,29 @@ function update() {
   document.getElementById('mensaje')!.textContent = mensaje;
   (document.getElementById('enviar') as HTMLAnchorElement).href = `https://wa.me/${form.dataset.wa}?text=${encodeURIComponent(mensaje)}`;
   form.querySelectorAll<HTMLElement>('[data-alveolos]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.alveolos === alveolos)));
+
+  // Cascada: cada paso se habilita recién cuando los anteriores están completos (6, 7 y 8 piden los cinco primeros).
+  const ok = [!!v('maquina'), !!semilla, !!forma, !!hileras && !!alveolos, medidaOk];
+  form.querySelectorAll<HTMLFieldSetElement>('fieldset[data-paso]').forEach(f => {
+    f.disabled = !ok.slice(0, Math.min(Number(f.dataset.paso) - 1, 5)).every(Boolean);
+  });
+
+  placaInput = { maquina: v('maquina'), semilla, forma, hileras, alveolos, m: noSe ? ['', '', ''] : partes.length === 2 ? [partes[0], partes[0], partes[1]] : [partes[0], partes[1], partes[2]] }; // redonda: diámetro = largo = ancho
+  setPlaca3d?.(placaInput);
 }
+
+// El visor 3D (three.js) se carga recién cuando el panel entra en pantalla.
+let placaInput: PlacaInput;
+let setPlaca3d: ((i: PlacaInput) => void) | undefined;
+const visor = document.getElementById('visor')!;
+const io = new IntersectionObserver(async ([e]) => {
+  if (!e.isIntersecting) return;
+  io.disconnect();
+  const { initPlaca3d } = await import('../placa3d');
+  setPlaca3d = initPlaca3d(visor);
+  setPlaca3d(placaInput);
+}, { rootMargin: '200px' });
+io.observe(visor);
 
 form.addEventListener('click', e => {
   const b = (e.target as HTMLElement).closest('button');

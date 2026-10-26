@@ -1,0 +1,524 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Placa Super Walter 3D</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: visor 3D ocupa la pantalla, panel de parámetros fijo a la derecha; en celular el visor va arriba y el panel abajo */
+:root{
+  --bg:#eef0eb; --surface:#ffffff; --fg:#18201a; --muted:#5a655c; --line:#d5dbd3;
+  --stage:#e3e7e0; --stage-hi:#f6f7f3; --row:#f1f3ee;
+  --accent:#1d5628; --on-accent:#ffffff; --hi:#f6e81d; --on-hi:#1f1d05;
+  --warn-bg:#fbf6c2; --warn-fg:#5b5205; --err-bg:#f3e1e0; --err-fg:#541d1d; --ok-bg:#e1efe2; --ok-fg:#1d5628;
+  --font-display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --font-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#111511; --surface:#181d19; --fg:#e6ebe4; --muted:#98a399; --line:#2b342c;
+    --stage:#141914; --stage-hi:#212821; --row:#1f261f;
+    --accent:#4cb862; --on-accent:#0b140c; --hi:#f6e81d; --on-hi:#1f1d05;
+    --warn-bg:#3a3510; --warn-fg:#f2e66a; --err-bg:#3a1c1a; --err-fg:#f0a196; --ok-bg:#16301b; --ok-fg:#7fd68f;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#111511; --surface:#181d19; --fg:#e6ebe4; --muted:#98a399; --line:#2b342c;
+  --stage:#141914; --stage-hi:#212821; --row:#1f261f;
+  --accent:#4cb862; --on-accent:#0b140c; --hi:#f6e81d; --on-hi:#1f1d05;
+  --warn-bg:#3a3510; --warn-fg:#f2e66a; --err-bg:#3a1c1a; --err-fg:#f0a196; --ok-bg:#16301b; --ok-fg:#7fd68f;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:15px;line-height:1.45}
+.app{display:grid;grid-template-columns:minmax(0,1fr) 360px;height:100%}
+.stage{position:relative;min-width:0;min-height:0;overflow:hidden;background:radial-gradient(ellipse 70% 60% at 50% 45%,var(--stage-hi),var(--stage))}
+#gl{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+#gl:active{cursor:grabbing}
+#loading{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:14px;padding:24px;text-align:center}
+
+.hud-name{position:absolute;top:18px;left:max(18px,env(safe-area-inset-left,0px));pointer-events:none}
+.hud-name .model{font-family:var(--font-display);font-weight:700;font-size:clamp(26px,3.4vw,40px);line-height:.95;letter-spacing:.01em;text-transform:uppercase;text-wrap:balance}
+.hud-name .model small{font-weight:600;text-transform:none;font-size:.8em}
+.hud-name .count{display:inline-block;margin-top:8px;font-family:var(--font-display);font-weight:600;font-size:18px;background:var(--hi);color:var(--on-hi);padding:1px 10px 2px;border-radius:3px}
+
+.views{position:absolute;top:18px;right:18px;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;max-width:52%}
+.vbtn{font:600 13px/1 var(--font-body);padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:color-mix(in srgb,var(--surface) 85%,transparent);color:var(--fg);cursor:pointer;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.vbtn:hover{border-color:var(--accent)}
+.vbtn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.vbtn:focus-visible,.seg button:focus-visible,.sw input:focus-visible+span,button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.hud-spec{position:absolute;left:max(18px,env(safe-area-inset-left,0px));bottom:18px;width:300px;pointer-events:none}
+.hint{position:absolute;right:18px;bottom:18px;font-size:12px;color:var(--muted);text-align:right;pointer-events:none}
+
+.spec{width:100%;border-collapse:separate;border-spacing:0 4px;font-variant-numeric:tabular-nums}
+.spec th{font:500 12px var(--font-body);color:var(--muted);text-align:left;padding:0 10px}
+.spec th:not(:first-child),.spec td:not(:first-child){text-align:right;width:56px}
+.spec td{background:color-mix(in srgb,var(--row) 88%,transparent);padding:6px 10px;font-size:14px}
+.spec td:first-child{border-radius:4px 0 0 4px}
+.spec td:last-child{border-radius:0 4px 4px 0;color:var(--muted)}
+.spec td.n{font-family:var(--font-mono);font-size:13px}
+
+.panel{min-width:0;overflow-y:auto;background:var(--surface);border-left:1px solid var(--line);padding-block:20px 32px;padding-left:20px;padding-right:max(20px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:22px}
+.eyebrow{margin:0 0 8px;font:600 12px var(--font-body);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+select{width:100%;font:600 16px var(--font-body);padding:9px 10px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+.sec{display:flex;flex-direction:column;gap:14px;padding-top:18px;border-top:1px solid var(--line)}
+.sec h2{margin:0;font:700 19px var(--font-display);letter-spacing:.04em;text-transform:uppercase}
+.field{display:flex;flex-direction:column;gap:6px}
+.field-top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.field label{font-weight:500;font-size:14px}
+.est{display:inline-block;margin-left:6px;font:500 10px var(--font-body);letter-spacing:.08em;text-transform:uppercase;color:var(--warn-fg);background:var(--warn-bg);padding:1px 6px;border-radius:3px;vertical-align:2px}
+.num{display:flex;align-items:baseline;gap:4px;color:var(--muted);font:13px var(--font-mono);white-space:nowrap}
+.num input{width:68px;font:500 14px var(--font-mono);text-align:right;padding:3px 6px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--fg)}
+input[type=range]{width:100%;accent-color:var(--accent);margin:0}
+.field.disabled{opacity:.45}
+
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{font:600 14px var(--font-body);padding:7px 16px;border:0;background:var(--bg);color:var(--fg);cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+
+.swatches{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.sw{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;text-align:center}
+.sw input{position:absolute;opacity:0;pointer-events:none}
+.sw span{width:38px;height:38px;border-radius:50%;border:2px solid var(--line);box-shadow:inset 0 -6px 10px rgba(0,0,0,.18)}
+.sw input:checked+span{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent),inset 0 -6px 10px rgba(0,0,0,.18)}
+.sw input:checked~em{color:var(--fg)}
+.sw em{font-style:normal}
+
+.status{display:flex;flex-direction:column;gap:8px}
+.pill{align-self:flex-start;font:600 13px var(--font-body);padding:4px 10px;border-radius:999px}
+.pill[data-lvl="ok"]{background:var(--ok-bg);color:var(--ok-fg)}
+.pill[data-lvl="warn"]{background:var(--warn-bg);color:var(--warn-fg)}
+.pill[data-lvl="err"]{background:var(--err-bg);color:var(--err-fg)}
+.issues{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.issues li{padding:6px 10px;border-radius:4px;border-left:3px solid}
+.issues li[data-lvl="warn"]{background:var(--warn-bg);color:var(--warn-fg)}
+.issues li[data-lvl="err"]{background:var(--err-bg);color:var(--err-fg)}
+.note{margin:0;font-size:13px;color:var(--muted)}
+
+.json-head{display:flex;justify-content:space-between;align-items:center}
+.btn{font:600 13px var(--font-body);padding:6px 12px;border-radius:5px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+pre{margin:0;overflow-x:auto;padding:12px;border-radius:6px;background:var(--bg);border:1px solid var(--line);font:12px/1.5 var(--font-mono)}
+.panel-spec{display:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+@media (max-width:820px){
+  html,body{height:auto}
+  .app{grid-template-columns:1fr;grid-template-rows:62vh auto;height:auto}
+  .panel{border-left:0;border-top:1px solid var(--line);overflow:visible;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .views{top:auto;bottom:12px;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));max-width:none;justify-content:center}
+  .views{right:max(12px,env(safe-area-inset-right,0px))}
+  .hud-name{top:14px;left:max(16px,env(safe-area-inset-left,0px))}
+  .hud-spec,.hint{display:none}
+  .panel-spec{display:block}
+}
+@media (min-width:821px) and (max-height:640px){.hud-spec{display:none}}
+</style>
+
+<div class="app">
+  <main class="stage" id="stage">
+    <canvas id="gl" aria-label="Vista 3D de la placa de siembra. Arrastrá para girar, rueda o pellizco para acercar."></canvas>
+    <div id="loading">Cargando visor 3D…</div>
+
+    <div class="hud-name" aria-live="polite">
+      <div class="model" id="hudModel">Super Walter <small>girasol</small></div>
+      <span class="count" id="hudCount">50 aguj</span>
+    </div>
+
+    <div class="views" role="group" aria-label="Vistas">
+      <button class="vbtn" data-view="perspectiva" aria-pressed="true">Perspectiva</button>
+      <button class="vbtn" data-view="planta" aria-pressed="false">Planta</button>
+      <button class="vbtn" data-view="canto" aria-pressed="false">Canto</button>
+      <button class="vbtn" data-view="alveolo" aria-pressed="false">Alvéolo</button>
+      <button class="vbtn" id="spinBtn" aria-pressed="false">Girar placa</button>
+    </div>
+
+    <div class="hud-spec"><table class="spec" id="specHud"></table></div>
+    <div class="hint">Arrastrá para girar · rueda para zoom<br>clic derecho o dos dedos para mover</div>
+  </main>
+
+  <aside class="panel" aria-label="Parámetros de la placa">
+    <div>
+      <p class="eyebrow">Sembrar · configurador de placas</p>
+      <label for="preset" class="sr">Modelo</label>
+      <select id="preset">
+        <option value="walter">Super Walter girasol · 50 aguj</option>
+        <option value="vhb">VHB maíz · 56 aguj</option>
+      </select>
+    </div>
+
+    <div class="panel-spec"><table class="spec" id="specPanel"></table></div>
+
+    <section class="sec" id="sec-disco"><h2>Disco</h2></section>
+    <section class="sec" id="sec-agujeros"><h2>Agujeros</h2></section>
+    <section class="sec" id="sec-alveolos">
+      <div class="row"><h2>Alvéolos</h2>
+        <div class="seg" role="group" aria-label="Cantidad de filas">
+          <button type="button" data-filas="1" aria-pressed="false">1 fila</button>
+          <button type="button" data-filas="2" aria-pressed="true">2 filas</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <h2>Material</h2>
+      <div class="swatches" id="swatches"></div>
+    </section>
+
+    <section class="sec">
+      <h2>Verificación</h2>
+      <div class="status">
+        <span class="pill" id="pill" data-lvl="ok">Sin interferencias</span>
+        <ul class="issues" id="issues"></ul>
+        <p class="note">Pared mínima aceptada: 1,5 mm. Los alvéolos atraviesan la placa, así que su profundidad es el espesor.</p>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="json-head"><h2>Parámetros</h2><button class="btn" id="copyBtn" type="button">Copiar JSON</button></div>
+      <pre id="json"></pre>
+    </section>
+  </aside>
+</div>
+
+<script>
+  setTimeout(function(){
+    if(!window.__visorOk){var l=document.getElementById('loading'); if(l) l.textContent='No se pudo cargar el motor 3D. Revisá la conexión y recargá la página.';}
+  },10000);
+</script>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
+window.__visorOk = true;
+document.getElementById('loading').hidden = true;
+
+/* ---------- Datos ---------- */
+const PRESETS = {
+  walter: { nombre:'Super Walter', semilla:'girasol', diametro:269, espesor:3.5, central:50, latDiam:18, latRadio:65, latAng:58,
+            cantidad:50, filas:2, largo:13, ancho:7, rExt:125, sepFilas:12, color:'gris',
+            est:['latRadio','latAng','rExt','sepFilas'] },
+  vhb:    { nombre:'VHB', semilla:'maíz', diametro:241, espesor:3.5, central:50, latDiam:19, latRadio:60, latAng:45,
+            cantidad:56, filas:2, largo:13, ancho:7, rExt:111, sepFilas:13, color:'crema',
+            est:['espesor','latRadio','latAng','largo','ancho','rExt','sepFilas'] }
+};
+const COLORES = {
+  gris:{label:'Gris', hex:'#b8b7ae'}, crema:{label:'Crema', hex:'#e9e4d0'},
+  negro:{label:'Negro', hex:'#2c2d2b'}, verde:{label:'Verde Sembrar', hex:'#1d5628'}
+};
+const FIELDS = [
+  {sec:'disco', k:'diametro', label:'Diámetro general', min:150, max:320, step:1},
+  {sec:'disco', k:'espesor', label:'Espesor', min:2, max:8, step:0.1},
+  {sec:'agujeros', k:'central', label:'Agujero central', min:20, max:90, step:0.5},
+  {sec:'agujeros', k:'latDiam', label:'Agujeros laterales (4)', min:6, max:30, step:0.5},
+  {sec:'agujeros', k:'latRadio', label:'Radio de los laterales', min:30, max:110, step:0.5},
+  {sec:'agujeros', k:'latAng', label:'Giro de los laterales', min:0, max:89, step:1, unit:'°'},
+  {sec:'alveolos', k:'cantidad', label:'Cantidad', min:8, max:96, step:1, unit:'u'},
+  {sec:'alveolos', k:'largo', label:'Largo', min:5, max:25, step:0.5},
+  {sec:'alveolos', k:'ancho', label:'Ancho', min:3, max:15, step:0.5},
+  {sec:'alveolos', k:'rExt', label:'Radio de la fila externa', min:60, max:158, step:0.5},
+  {sec:'alveolos', k:'sepFilas', label:'Separación entre filas', min:6, max:40, step:0.5},
+];
+const PARED_MIN = 1.5;
+
+let p = structuredClone(PRESETS.walter);
+let estimados = new Set(p.est);
+const fmt = (v, d=1) => Number(v).toLocaleString('es-AR', {maximumFractionDigits:d});
+
+/* ---------- Geometría ---------- */
+function slotPts(cx, cy, ang, L, W, seg=14){
+  const r = W/2, h = Math.max(0, (L - W)/2);
+  const ux = Math.cos(ang), uy = Math.sin(ang);
+  const c1 = [cx + ux*h, cy + uy*h], c2 = [cx - ux*h, cy - uy*h];
+  const pts = [];
+  for (let i=0;i<=seg;i++){ const a = ang - Math.PI/2 + Math.PI*i/seg; pts.push(new THREE.Vector2(c1[0]+Math.cos(a)*r, c1[1]+Math.sin(a)*r)); }
+  for (let i=0;i<=seg;i++){ const a = ang + Math.PI/2 + Math.PI*i/seg; pts.push(new THREE.Vector2(c2[0]+Math.cos(a)*r, c2[1]+Math.sin(a)*r)); }
+  return pts;
+}
+function layoutSlots(p){
+  const out = [];
+  const filas = p.filas === 2 ? [Math.ceil(p.cantidad/2), Math.floor(p.cantidad/2)] : [p.cantidad];
+  filas.forEach((n, row) => {
+    const r = p.rExt - row*p.sepFilas, off = row === 1 ? Math.PI/n : 0;
+    for (let i=0;i<n;i++){ const a = off + i*2*Math.PI/n; out.push({x:Math.cos(a)*r, y:Math.sin(a)*r, a, row}); }
+  });
+  return out;
+}
+function laterales(p){
+  return [0,1,2,3].map(k => { const a = (p.latAng + k*90) * Math.PI/180; return {x:Math.cos(a)*p.latRadio, y:Math.sin(a)*p.latRadio}; });
+}
+function crearPlaca(p){
+  const R = p.diametro/2;
+  const s = new THREE.Shape(); s.absarc(0, 0, R, 0, Math.PI*2, false);
+  const c = new THREE.Path(); c.absarc(0, 0, p.central/2, 0, Math.PI*2, true); s.holes.push(c);
+  for (const l of laterales(p)){ const h = new THREE.Path(); h.absarc(l.x, l.y, p.latDiam/2, 0, Math.PI*2, true); s.holes.push(h); }
+  for (const sl of layoutSlots(p)) s.holes.push(new THREE.Path(slotPts(sl.x, sl.y, sl.a, p.largo, p.ancho)));
+  const b = Math.min(0.3, p.espesor*0.12, p.ancho*0.08);
+  const g = new THREE.ExtrudeGeometry(s, { depth:p.espesor - 2*b, curveSegments:64,
+    bevelEnabled:true, bevelThickness:b, bevelSize:b, bevelOffset:-b, bevelSegments:2 });
+  g.translate(0, 0, b);
+  g.rotateX(-Math.PI/2);            // la placa queda acostada, espesor hacia +Y
+  const sm = toCreasedNormals(g, Math.PI/7);  // paredes de agujeros suaves, aristas vivas
+  g.dispose();
+  return sm;
+}
+
+/* ---------- Verificación ---------- */
+function validar(p){
+  const R = p.diametro/2, issues = []; let minPared = Infinity;
+  const reg = (v, txt) => { minPared = Math.min(minPared, v);
+    if (v < PARED_MIN) issues.push({lvl: v < 0.3 ? 'err' : 'warn', txt: v < 0.3 ? `${txt}: se superponen` : `${txt}: ${fmt(v)} mm`}); };
+  if (p.ancho > p.largo) issues.push({lvl:'warn', txt:'El ancho supera al largo: el alvéolo se dibuja redondo'});
+  const slots = layoutSlots(p).map(s => ({...s, pts:slotPts(s.x, s.y, s.a, p.largo, p.ancho, 8)}));
+  reg(R - (p.rExt + p.largo/2), 'Fila externa contra el borde');
+  let mm = Infinity;
+  for (let i=0;i<slots.length;i++) for (let j=i+1;j<slots.length;j++){
+    const A = slots[i], B = slots[j];
+    if (Math.hypot(A.x-B.x, A.y-B.y) > p.largo + p.ancho + 2) continue;
+    for (const a of A.pts) for (const q of B.pts) mm = Math.min(mm, a.distanceTo(q));
+  }
+  if (mm < Infinity) reg(mm, 'Entre alvéolos');
+  const rMin = p.rExt - (p.filas === 2 ? p.sepFilas : 0) - p.largo/2;
+  reg(rMin - p.central/2, 'Fila interna contra el agujero central');
+  reg(p.latRadio - p.latDiam/2 - p.central/2, 'Laterales contra el agujero central');
+  reg(p.latRadio*Math.SQRT2 - p.latDiam, 'Entre agujeros laterales');
+  let ml = Infinity;
+  for (const l of laterales(p)) for (const s of slots) for (const q of s.pts) ml = Math.min(ml, Math.hypot(q.x-l.x, q.y-l.y) - p.latDiam/2);
+  reg(ml, 'Laterales contra los alvéolos');
+  return {issues, minPared};
+}
+
+/* ---------- Escena ---------- */
+const stage = document.getElementById('stage');
+const canvas = document.getElementById('gl');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.toneMapping = THREE.NeutralToneMapping;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.setClearColor(0x000000, 0);
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.75;
+
+const camera = new THREE.PerspectiveCamera(30, 1, 1, 6000);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minDistance = 25; controls.maxDistance = 1800; controls.screenSpacePanning = true;
+
+const key = new THREE.DirectionalLight(0xffffff, 2.3);
+key.position.set(220, 420, 160); key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+Object.assign(key.shadow.camera, {left:-230, right:230, top:230, bottom:-230, near:50, far:1200});
+key.shadow.bias = -0.0004; key.shadow.normalBias = 0.3;
+scene.add(key);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8b9087, 0.55));
+
+const groundMat = new THREE.ShadowMaterial({opacity:0.17});
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), groundMat);
+ground.rotation.x = -Math.PI/2; ground.receiveShadow = true; scene.add(ground);
+
+function texturaSuperficie(){
+  const S = 1024, c = document.createElement('canvas'); c.width = c.height = S;
+  const g = c.getContext('2d');
+  g.fillStyle = 'rgb(152,152,152)'; g.fillRect(0, 0, S, S);
+  g.lineWidth = 1;
+  for (let r=3; r<S*0.72; r+=2.1){ const v = 152 + (Math.random()-0.5)*24; g.strokeStyle = `rgba(${v|0},${v|0},${v|0},0.5)`; g.beginPath(); g.arc(S/2, S/2, r, 0, Math.PI*2); g.stroke(); }
+  const img = g.getImageData(0, 0, S, S), d = img.data;
+  for (let i=0;i<d.length;i+=4){ const n = (Math.random()-0.5)*26; d[i]+=n; d[i+1]+=n; d[i+2]+=n; }
+  g.putImageData(img, 0, 0);
+  for (let i=0;i<2400;i++){ const v = Math.random()<0.5 ? 112 : 192; g.fillStyle = `rgba(${v},${v},${v},0.55)`; g.beginPath(); g.arc(Math.random()*S, Math.random()*S, 0.4+Math.random()*1.5, 0, 7); g.fill(); }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.NoColorSpace;
+  t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  return t;
+}
+const tex = texturaSuperficie();
+const material = new THREE.MeshPhysicalMaterial({
+  color:COLORES.gris.hex, roughness:1, roughnessMap:tex, bumpMap:tex, bumpScale:1.2,
+  metalness:0, specularIntensity:0.55, clearcoat:0.06, clearcoatRoughness:0.6
+});
+const placa = new THREE.Group(); scene.add(placa);
+const mesh = new THREE.Mesh(new THREE.BufferGeometry(), material);
+mesh.castShadow = true; placa.add(mesh);
+
+/* ---------- Cámara y vistas ---------- */
+function distAjuste(){
+  const R = p.diametro/2 * 1.2;
+  const v = THREE.MathUtils.degToRad(camera.fov);
+  const h = 2*Math.atan(Math.tan(v/2)*camera.aspect);
+  return R / Math.sin(Math.min(v, h)/2);
+}
+const V = (x,y,z) => new THREE.Vector3(x,y,z);
+const VISTAS = {
+  perspectiva: () => ({pos: V(0.42, 0.7, 0.58).normalize().multiplyScalar(distAjuste()), target: V(0, 0, 0)}),
+  planta:      () => ({pos: V(0, distAjuste(), 0.01), target: V(0, 0, 0)}),
+  canto:       () => { const d = distAjuste(); return {pos: V(d, d*0.06, 0), target: V(0, p.espesor/2, 0)}; },
+  alveolo:     () => {
+    spinning = false; syncSpin();
+    const t = placa.localToWorld(V(p.rExt, p.espesor/2, 0));
+    const out = t.clone().setY(0).normalize(), tan = V(-out.z, 0, out.x);
+    return {pos: t.clone().add(out.multiplyScalar(38)).add(tan.multiplyScalar(30)).add(V(0, 62, 0)), target: t};
+  }
+};
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let tween = null, vistaActual = 'perspectiva';
+function irA(nombre, instant=false){
+  const v = VISTAS[nombre](); vistaActual = nombre;
+  document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', b.dataset.view === nombre));
+  if (instant || reduceMotion){ camera.position.copy(v.pos); controls.target.copy(v.target); tween = null; return; }
+  tween = {p0:camera.position.clone(), t0:controls.target.clone(), ...v, s:performance.now(), d:750};
+}
+controls.addEventListener('start', () => {
+  tween = null; vistaActual = null;
+  document.querySelectorAll('[data-view]').forEach(b => b.setAttribute('aria-pressed', 'false'));
+});
+document.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => irA(b.dataset.view)));
+
+let spinning = false;
+const spinBtn = document.getElementById('spinBtn');
+function syncSpin(){ spinBtn.setAttribute('aria-pressed', spinning); spinBtn.textContent = spinning ? 'Detener giro' : 'Girar placa'; }
+spinBtn.addEventListener('click', () => { spinning = !spinning; syncSpin(); });
+
+function resize(){
+  const w = stage.clientWidth, h = stage.clientHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / Math.max(h, 1); camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(stage); resize();
+
+/* ---------- Tema ---------- */
+function esOscuro(){
+  const t = document.documentElement.dataset.theme;
+  return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+}
+function aplicarTema(){ groundMat.opacity = esOscuro() ? 0.42 : 0.17; }
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', aplicarTema);
+new MutationObserver(aplicarTema).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+aplicarTema();
+
+/* ---------- Panel ---------- */
+const inputs = {};
+for (const f of FIELDS){
+  const wrap = document.createElement('div'); wrap.className = 'field'; wrap.id = 'wrap-' + f.k;
+  const unit = f.unit ?? 'mm';
+  wrap.innerHTML = `
+    <div class="field-top">
+      <label for="r-${f.k}">${f.label}<span class="est" id="est-${f.k}" hidden>estimado</span></label>
+      <span class="num"><input type="number" id="n-${f.k}" min="${f.min}" max="${f.max}" step="${f.step}" aria-label="${f.label} en ${unit}">${unit === 'u' ? '' : unit}</span>
+    </div>
+    <input type="range" id="r-${f.k}" min="${f.min}" max="${f.max}" step="${f.step}">`;
+  document.getElementById('sec-' + f.sec).appendChild(wrap);
+  const r = wrap.querySelector('input[type=range]'), n = wrap.querySelector('input[type=number]');
+  inputs[f.k] = {r, n, f};
+  const set = (v) => {
+    v = Math.min(f.max, Math.max(f.min, Number(v)));
+    if (Number.isNaN(v)) return;
+    p[f.k] = v; r.value = v; n.value = v;
+    estimados.delete(f.k); document.getElementById('est-' + f.k).hidden = true;
+    refrescar();
+  };
+  r.addEventListener('input', () => set(r.value));
+  n.addEventListener('change', () => set(n.value));
+}
+function cargarInputs(){
+  for (const k in inputs){ inputs[k].r.value = p[k]; inputs[k].n.value = p[k]; document.getElementById('est-' + k).hidden = !estimados.has(k); }
+  document.querySelectorAll('[data-filas]').forEach(b => b.setAttribute('aria-pressed', Number(b.dataset.filas) === p.filas));
+  document.getElementById('wrap-sepFilas').classList.toggle('disabled', p.filas !== 2);
+  inputs.sepFilas.r.disabled = inputs.sepFilas.n.disabled = p.filas !== 2;
+  const sw = document.querySelector(`input[name=color][value=${p.color}]`); if (sw) sw.checked = true;
+}
+document.querySelectorAll('[data-filas]').forEach(b => b.addEventListener('click', () => { p.filas = Number(b.dataset.filas); cargarInputs(); refrescar(); }));
+
+const swWrap = document.getElementById('swatches');
+for (const [k, c] of Object.entries(COLORES)){
+  const l = document.createElement('label'); l.className = 'sw';
+  l.innerHTML = `<input type="radio" name="color" id="c-${k}" value="${k}"><span style="background:${c.hex}"></span><em>${c.label}</em>`;
+  l.querySelector('input').addEventListener('change', () => { p.color = k; material.color.set(c.hex); renderJSON(); });
+  swWrap.appendChild(l);
+}
+
+document.getElementById('preset').addEventListener('change', (e) => {
+  p = structuredClone(PRESETS[e.target.value]); estimados = new Set(p.est);
+  material.color.set(COLORES[p.color].hex);
+  cargarInputs(); refrescar(); irA(vistaActual && vistaActual !== 'alveolo' ? vistaActual : 'perspectiva');
+});
+
+function renderSpec(){
+  const rows = [
+    ['Diam. General', p.diametro], ['Aguj. Central', p.central], ['Aguj. Laterales(4)', p.latDiam],
+    ['Espesor', p.espesor], [`Alvéolo (largo × ancho)`, null]
+  ];
+  const html = `<thead><tr><th>Características</th><th>mm</th><th>cm</th></tr></thead><tbody>` +
+    rows.map(([k, v]) => v === null
+      ? `<tr><td>${k}</td><td class="n" colspan="2" style="text-align:right">${fmt(p.largo)} × ${fmt(p.ancho)} mm</td></tr>`
+      : `<tr><td>${k}</td><td class="n">${fmt(v)}</td><td class="n">${fmt(v/10, 2)}</td></tr>`).join('') + `</tbody>`;
+  document.getElementById('specHud').innerHTML = html;
+  document.getElementById('specPanel').innerHTML = html;
+  document.getElementById('hudModel').innerHTML = `${p.nombre} <small>${p.semilla}</small>`;
+  document.getElementById('hudCount').textContent = `${p.cantidad} aguj`;
+}
+function renderValidacion(){
+  const {issues, minPared} = validar(p);
+  const pill = document.getElementById('pill');
+  const lvl = issues.some(i => i.lvl === 'err') ? 'err' : issues.length ? 'warn' : 'ok';
+  pill.dataset.lvl = lvl;
+  pill.textContent = lvl === 'err' ? 'Hay agujeros superpuestos' : lvl === 'warn' ? `Paredes finas · mínima ${fmt(Math.max(minPared,0))} mm` : `Sin interferencias · pared mínima ${fmt(minPared)} mm`;
+  document.getElementById('issues').innerHTML = issues.map(i => `<li data-lvl="${i.lvl}">${i.txt}</li>`).join('');
+}
+function datosJSON(){
+  const {est, ...resto} = p;
+  return {...resto, alveolo:{largo:p.largo, ancho:p.ancho, profundidad:p.espesor}, unidades:'mm'};
+}
+function renderJSON(){ document.getElementById('json').textContent = JSON.stringify(datosJSON(), null, 2); }
+document.getElementById('copyBtn').addEventListener('click', async (e) => {
+  const btn = e.currentTarget, txt = JSON.stringify(datosJSON(), null, 2);
+  try { await navigator.clipboard.writeText(txt); btn.textContent = 'Copiado'; }
+  catch { const r = document.createRange(); r.selectNodeContents(document.getElementById('json')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = 'Seleccionado, copiá con Ctrl+C'; }
+  setTimeout(() => btn.textContent = 'Copiar JSON', 1800);
+});
+
+let raf = 0;
+function refrescar(){
+  cancelAnimationFrame(raf);
+  raf = requestAnimationFrame(() => {
+    const g = crearPlaca(p); mesh.geometry.dispose(); mesh.geometry = g;
+    tex.repeat.set(1/p.diametro, 1/p.diametro); tex.offset.set(0.5, 0.5);
+    renderSpec(); renderValidacion(); renderJSON();
+  });
+}
+
+/* ---------- Arranque ---------- */
+cargarInputs();
+refrescar();
+irA('perspectiva', true);
+
+let last = performance.now();
+renderer.setAnimationLoop((now) => {
+  const dt = Math.min(0.05, (now - last)/1000); last = now;
+  if (tween){
+    const k = Math.min(1, (now - tween.s)/tween.d), e = k < 0.5 ? 4*k*k*k : 1 - Math.pow(-2*k + 2, 3)/2;
+    camera.position.lerpVectors(tween.p0, tween.pos, e); controls.target.lerpVectors(tween.t0, tween.target, e);
+    if (k >= 1) tween = null;
+  }
+  if (spinning) placa.rotation.y += dt * (reduceMotion ? 0.25 : 0.7);
+  controls.update();
+  renderer.render(scene, camera);
+});
+</script>
+
+</body></html>
