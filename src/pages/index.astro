@@ -5,7 +5,7 @@ const WA_NUMBER = '5493472505151';
 const waHref = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent('Hola! Quiero consultar por placas de siembra.')}`;
 const waDisplay = WA_NUMBER.replace(/^549?(\d{3,4})(\d{2,3})(\d{4})$/, '+54 9 $1 $2-$3');
 
-const marcas = ['Achillii','Agrometal', 'Apache','Ascanelli','Brioschi','Cele', 'Crucianelli','Dancar','DASA', 'Dolby', 'Dumaire', 'Erca','Fabimag', 'Fankhauser', 'FerCam', 'Fran Kausen', 'Geronzi', 'Gherardi', 'Giorgi', 'Juber', 'Jumil', 'Magna', 'Malasia', 'Metar', 'Migra', 'Monumental', 'Pierobon', 'Pla', 'Schiarre', 'Sembrar', 'Super Walter', 'Surka', 'Tanzi', 'Tedeschi', 'Tefoni', 'Templar', 'VHB','Otra'];
+const marcas = ['Achillii','Agrometal', 'Apache','Ascanelli','Brioschi','Cele', 'Crucianelli','Dancar','DASA', 'Dolby', 'Dumaire', 'Erca','Fabimag', 'Fankhauser', 'FerCam', 'Fran Kausen', 'Geronzi', 'Gherardi', 'Giorgi', 'Juber', 'Jumil', 'Magna', 'Malasia', 'Metar', 'Migra', 'Monumental', 'Pierobon', 'Pla', 'Schiarre', 'Sembrar', 'Super Walter', 'Surka', 'Tanzi', 'Tedeschi', 'Tefoni', 'Templar', 'VHB','Mi sembradora no figura en el listado'];
 const semillas = ['Soja', 'Maíz', 'Girasol', 'Sorgo', 'Otra'];
 const formas = [{ l: 'Redonda', w: '18px' }, { l: 'Alargada', w: '40px' }, { l: 'No sé', w: '0px' }];
 const hileras = ['2', '3'];
@@ -98,6 +98,106 @@ const medidasPorTipo: Record<string, string[][]> = {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;700;800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style is:global>
+  /* FAQ / Información por ubicación */
+.faq-section {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 72px 20px;
+}
+
+.faq-tabs {
+  display: flex;
+  gap: 10px;
+  margin: 28px 0 24px;
+  flex-wrap: wrap;
+}
+
+.faq-tab {
+  border: 1.5px solid #d6cdb8;
+  background: #fff;
+  color: #1c261e;
+  padding: 14px 24px;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: .2s ease;
+}
+
+.faq-tab:hover {
+  border-color: #1d5628;
+}
+
+.faq-tab[aria-pressed="true"] {
+  background: #1d5628;
+  border-color: #1d5628;
+  color: #f6f2e8;
+}
+
+.faq-list {
+  display: grid;
+  gap: 10px;
+}
+
+.faq-item {
+  background: #fff;
+  border: 1px solid #e3dccb;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.faq-item summary {
+  cursor: pointer;
+  padding: 20px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1c261e;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-item summary::after {
+  content: '+';
+  font-size: 24px;
+  color: #1d5628;
+  flex: none;
+  transition: transform .2s ease;
+}
+
+.faq-item[open] summary::after {
+  content: '−';
+}
+
+.faq-answer {
+  padding: 0 20px 20px;
+  color: #4a544b;
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.faq-panel[hidden] {
+  display: none;
+}
+
+@media(max-width: 520px) {
+  .faq-tab {
+    flex: 1;
+    padding: 13px 12px;
+    font-size: 14px;
+  }
+
+  .faq-item summary {
+    padding: 17px;
+    font-size: 15px;
+  }
+}
 html{scroll-behavior:smooth}
 body{margin:0;background:#f6f2e8;color:#1c261e;font-family:Figtree,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 a{color:#1d5628;text-decoration:underline;text-underline-offset:3px}
@@ -119,7 +219,6 @@ fieldset.card:disabled{opacity:0.45}
 #gl:active{cursor:grabbing}
 .vbtn{font:600 13px/1 Figtree,system-ui,sans-serif;padding:9px 13px;border-radius:999px;border:1.5px solid rgba(246,242,232,0.35);background:none;color:#f6f2e8;cursor:pointer}
 .vbtn[aria-pressed="true"]{background:#f6e81d;border-color:#f6e81d;color:#1d5628}
-@media (min-width:840px){#resumen{max-height:calc(100vh - 100px);overflow-y:auto;scrollbar-width:none}#resumen::-webkit-scrollbar{display:none}}
 @media (max-width:720px){.nav-link{display:none}}
 @media (max-width:420px){.brand-text{font-size:16px!important}.nav-wa{padding:8px 12px!important;font-size:14px}}
 </style>
@@ -129,14 +228,15 @@ fieldset.card:disabled{opacity:0.45}
 <header style="position:sticky;top:0;z-index:20;background:rgba(246,242,232,0.94);backdrop-filter:blur(8px);border-bottom:1px solid #e3dccb">
   <div style="max-width:1180px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px">
     <a href="#inicio" style="display:flex;align-items:center;gap:10px;text-decoration:none;color:#1d5628">
-      <span style="width:34px;height:34px;border-radius:50%;background:#1d5628;display:grid;place-items:center">
-        <span style="width:12px;height:12px;border-radius:50%;background:#f6e81d"></span>
-      </span>
-      <span class="brand-text" style="font-family:Bitter,serif;font-weight:800;font-size:19px;letter-spacing:-0.01em;line-height:1;white-space:nowrap">Placas de Siembra</span>
+      <img src="/public/images/logo.png" style="width: 280px;">
     </a>
-    <nav style="display:flex;gap:22px;align-items:center;font-weight:600;font-size:15px">
+    <nav style="display:flex;gap:22px;align-items:center;font-weight:600;font-size:20px">
       <a class="nav-link" href="#producto" style="color:#1c261e;text-decoration:none">Producto</a>
       <a class="nav-link" href="#cotizador" style="color:#1c261e;text-decoration:none">Cómo pedir</a>
+      <a class="nav-link" href="#informacion"
+   style="color:#1c261e;text-decoration:none">
+  Información
+</a>
       <a class="nav-link" href="#contacto" style="color:#1c261e;text-decoration:none">Contacto</a>
       <a class="nav-wa" href={waHref} target="_blank" rel="noopener" style="background:#f6e81d;color:#1d5628;text-decoration:none;padding:10px 16px;border-radius:999px;font-weight:700;display:flex;align-items:center;gap:8px;white-space:nowrap">
         <span style="width:8px;height:8px;border-radius:50%;background:#009919"></span>WhatsApp
@@ -150,18 +250,25 @@ fieldset.card:disabled{opacity:0.45}
   <div style="max-width:1180px;margin:0 auto;padding:48px 20px 56px;display:flex;flex-wrap:wrap;gap:40px;align-items:center">
     <div style="flex:1 1 340px;min-width:0">
       <h1 style="font-family:Bitter,serif;font-weight:800;font-size:clamp(38px,7vw,64px);line-height:1.02;letter-spacing:-0.02em;margin:20px 0 18px;text-wrap:balance">La placa justa para cada semilla que sembrás.</h1>
-      <p style="font-size:clamp(17px,2.2vw,20px);line-height:1.5;margin:0 0 30px;max-width:520px;opacity:0.92;text-wrap:pretty">Fabricamos placas a medida para tu sembradora. Decinos qué máquina tenés y qué vas a sembrar: nosotros te decimos cuál va.</p>
+      <p style="font-size:clamp(17px,2.2vw,20px);line-height:1.5;margin:0 0 30px;max-width:520px;opacity:0.92;text-wrap:pretty">Fabricamos placas plasticas para tu sembradora. Decinos qué máquina tenés y qué vas a sembrar: nosotros te decimos cuál va.</p>
       <div style="display:flex;flex-wrap:wrap;gap:12px">
         <a href={waHref} target="_blank" rel="noopener" style="background:#f6e81d;color:#1d5628;text-decoration:none;padding:16px 24px;border-radius:14px;font-weight:700;font-size:17px;display:flex;align-items:center;gap:10px;min-height:56px">
           <span style="width:10px;height:10px;border-radius:50%;background:#1d5628"></span>Consultar por WhatsApp
         </a>
         <a href="#cotizador" style="border:2px solid rgba(246,242,232,0.5);color:#f6f2e8;text-decoration:none;padding:14px 22px;border-radius:14px;font-weight:600;font-size:17px;display:flex;align-items:center;min-height:56px">Armar mi pedido</a>
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:32px;font-size:14px;font-weight:500;opacity:0.9">
-        {['Redondas y alargadas', 'Hileras y alvéolos a pedido', 'Te asesoramos antes de comprar'].map(t => (
+      <div style="display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:32px;margin-bottom:32px;font-size:14px;font-weight:500;opacity:0.9">
+        {['Soja', 'Sorgo', 'Maiz', 'Girasol'].map(t => (
           <span style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;background:#f6e81d;transform:rotate(45deg)"></span>{t}</span>
         ))}
       </div>
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+    <span style="font-size:clamp(17px,2.2vw,20px); line-height:1.5; margin:0; max-width:520px; opacity:0.92; text-wrap:pretty;">
+        Calidad premium con
+    </span>
+
+    <img src="/images/logo_dupont.png" style="width:120px; height:auto; display:block;">
+</div>
     </div>
     <div style="flex:1 1 360px;min-width:0;position:relative">
       <div class="slot" style="aspect-ratio:1/1;width:100%;border-radius:22px;overflow:hidden;background:#174520">
@@ -175,7 +282,7 @@ fieldset.card:disabled{opacity:0.45}
   </div>
 </section>
 
-<section class="slot" style="height:clamp(220px,34vw,420px);background:#e3dccb">
+<section class="slot" style="height:clamp(150px,32vw,500px);background:#e3dccb">
   <img src="/images/banda-campo.png" alt="Siembra en el campo" loading="lazy">
 </section>
 
@@ -218,8 +325,8 @@ fieldset.card:disabled{opacity:0.45}
 
   <div style="margin-top:20px;background:#541d1d;color:#f6f2e8;border-radius:20px;padding:28px 24px;display:flex;flex-wrap:wrap;gap:28px;align-items:center">
     <div style="flex:1 1 280px;min-width:0">
-      <div style="font-family:Bitter,serif;font-weight:800;font-size:24px">Hileras y alvéolos, a pedido</div>
-      <p style="font-size:16px;line-height:1.55;margin:10px 0 0;opacity:0.92;text-wrap:pretty">Las <strong>hileras</strong> son las filas de alvéolos alrededor de la placa. Los <strong>alvéolos</strong> son los agujeros donde entra cada semilla. Se combinan según la densidad que buscás.</p>
+      <div style="font-family:Bitter,serif;font-weight:800;font-size:24px">Hileras y alvéolos</div>
+      <p style="font-size:16px;line-height:1.55;margin:10px 0 0;opacity:0.92;text-wrap:pretty">Las <strong>hileras</strong> son las filas de alvéolos alrededor de la placa. Los <strong>alvéolos</strong> son los agujeros donde entra cada semilla. Se combinan según la tu máquina.</p>
     </div>
     <div style="flex:1 1 260px;display:flex;gap:12px;flex-wrap:wrap">
       <div style="flex:1 1 110px;background:rgba(246,242,232,0.1);border-radius:14px;padding:16px">
@@ -236,6 +343,169 @@ fieldset.card:disabled{opacity:0.45}
       </div>
     </div>
   </div>
+</section>
+
+<section id="informacion" class="faq-section">
+
+  <div style="font-size:13px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#541d1d">
+    Información importante
+  </div>
+
+  <h2 style="font-family:Bitter,serif;font-weight:800;font-size:clamp(30px,5vw,46px);line-height:1.06;letter-spacing:-0.015em;margin:12px 0;color:#1d5628;text-wrap:balance">
+    Antes de realizar tu pedido
+  </h2>
+
+  <p style="font-size:18px;line-height:1.55;margin:0;max-width:620px;color:#4a544b">
+    Conocé nuestros medios de pago, opciones de envío y tiempos de entrega según tu ubicación.
+  </p>
+
+  <!-- Selector de ubicación -->
+  <div class="faq-tabs" role="group" aria-label="Seleccionar ubicación">
+
+    <button
+      type="button"
+      class="faq-tab"
+      data-faq-country="argentina"
+      aria-pressed="true">
+      🇦🇷 Argentina
+    </button>
+
+    <button
+      type="button"
+      class="faq-tab"
+      data-faq-country="bolivia"
+      aria-pressed="false">
+      🇧🇴 Bolivia
+    </button>
+
+  </div>
+
+  <!-- ARGENTINA -->
+  <div class="faq-panel" data-faq-panel="argentina">
+
+    <div style="font-family:Bitter,serif;font-weight:700;font-size:23px;color:#1d5628;margin-bottom:16px">
+      Información para Argentina 🇦🇷
+    </div>
+
+    <div class="faq-list">
+
+      <details class="faq-item">
+        <summary>¿Qué medios de pago aceptan?</summary>
+        <div class="faq-answer">
+          Trabajamos únicamente con transferencia bancaria.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>¿Qué medios de envío utilizan?</summary>
+        <div class="faq-answer">
+          Realizamos envíos a través de diferentes servicios de transporte:
+          <ul>
+            <li>Correo Argentino</li>
+            <li>OCA</li>
+            <li>Andreani</li>
+            <li>Vía Cargo</li>
+            <li>Credifin</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>¿Cuánto tarda en llegar mi pedido?</summary>
+        <div class="faq-answer">
+          El tiempo de entrega depende del servicio de transporte seleccionado y del destino.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>¿Hay stock disponible para entrega inmediata?</summary>
+        <div class="faq-answer">
+          No disponemos de stock inmediato. Las placas se preparan para cada pedido.
+        </div>
+      </details>
+
+    </div>
+  </div>
+
+  <!-- BOLIVIA -->
+  <div class="faq-panel" data-faq-panel="bolivia" hidden>
+
+    <div style="font-family:Bitter,serif;font-weight:700;font-size:23px;color:#1d5628;margin-bottom:16px">
+      Información para Bolivia 🇧🇴
+    </div>
+
+    <div class="faq-list">
+
+      <details class="faq-item">
+        <summary>¿Qué medios de pago aceptan?</summary>
+        <div class="faq-answer">
+          Aceptamos los siguientes medios de pago:
+          <ul>
+            <li>Dólares estadounidenses (USD)</li>
+            <li>Pesos bolivianos (BOB)</li>
+            <li>Pesos argentinos (ARS)</li>
+            <li>USDT</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>¿Cómo se realizan los envíos?</summary>
+        <div class="faq-answer">
+          Los envíos se realizan mediante Vía Cargo con destino a Santa Cruz, Bolivia.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>¿Quiénes son sus representantes en Bolivia?</summary>
+        <div class="faq-answer">
+          Contamos con dos representantes en Bolivia:
+          <ul>
+            <li><a href="https://www.tiktok.com/@diformaquinaria" target="_blank" rel="noopener">Difor Maquinarias</a></li>
+            <li><a href="https://www.facebook.com/expotractor/?locale=es_LA" target="_blank" rel="noopener">Exposervi SRL</a></li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>¿Cuánto tarda en llegar mi pedido?</summary>
+        <div class="faq-answer">
+          El tiempo estimado de entrega es de aproximadamente 7 días.
+        </div>
+      </details>
+
+      <details class="faq-item">
+        <summary>¿Hay stock disponible para entrega inmediata?</summary>
+        <div class="faq-answer">
+          No disponemos de stock inmediato. Las placas se preparan para cada pedido.
+        </div>
+      </details>
+
+    </div>
+  </div>
+
+  <!-- Contacto -->
+  <div style="margin-top:28px;background:#541d1d;color:#f6f2e8;border-radius:18px;padding:24px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between">
+
+    <div style="flex:1 1 220px">
+      <div style="font-family:Bitter,serif;font-weight:700;font-size:21px">
+        ¿Tenés alguna otra consulta?
+      </div>
+      <p style="margin:7px 0 0;font-size:15px;line-height:1.5;opacity:.9">
+        Escribinos y te asesoramos para que puedas realizar tu pedido.
+      </p>
+    </div>
+
+    <a
+      href={waHref}
+      target="_blank"
+      rel="noopener"
+      style="background:#f6e81d;color:#1d5628;text-decoration:none;padding:15px 22px;border-radius:12px;font-weight:800;white-space:nowrap">
+      Consultar por WhatsApp →
+    </a>
+
+  </div>
+
 </section>
 
 <section id="cotizador" style="max-width:1180px;margin:0 auto;padding:56px 20px 72px">
@@ -302,7 +572,7 @@ fieldset.card:disabled{opacity:0.45}
 
       <fieldset class="card" data-paso="5" disabled>
         <div class="step" style="margin-bottom:6px"><b>5</b>Medida de la placa</div>
-        <div style="font-size:14px;color:#6a726b;margin:0 0 12px 40px">Suele estar grabada en la placa que usás hoy.</div>
+        <div style="font-size:14px;color:#6a726b;margin:0 0 12px 40px">Suele estar grabada en la placa que usás hoy, o <a href="/catalogo-medidas.pdf" target="_blank" rel="noopener" style="color:#1d5628;font-weight:600;text-decoration:underline">ver catálogo</a>.</div>
         <div id="medida-lista" hidden>
           <div style="display:flex;gap:10px;flex-wrap:wrap">
             {['s1', 's2', 's3'].map(n => <select name={n} class="field" style="flex:1 1 130px;font-weight:600"></select>)}
@@ -343,39 +613,39 @@ fieldset.card:disabled{opacity:0.45}
       </fieldset>
 
       <fieldset class="card" data-paso="8" disabled>
-        <div class="step"><b>8</b><span>Foto de la placa <span style="font-weight:500;color:#6a726b;font-size:15px">(opcional)</span></span></div>
-        <input type="file" name="plano" accept="application/pdf,image/png,image/jpeg,.pdf,.png,.jpg,.jpeg" aria-label="Foto de la placa" style="font-size:15px;max-width:100%">
-        <div style="font-size:14px;color:#6a726b;margin-top:10px">PDF, PNG o JPG, hasta 4 MB. El link viaja en el mensaje de WhatsApp.</div>
-        <div id="plano-estado" role="status" style="font-size:14px;margin-top:8px;font-weight:600"></div>
+        <div class="step"><b>8</b>Muestra de semilla</div>
+        <label style="display:flex;align-items:center;gap:10px;padding:6px 0;cursor:pointer;font-size:16px">
+          <input type="checkbox" name="muestra" style="flex:none;width:24px;height:24px;margin:0;accent-color:#1d5628">
+          Envío muestra de semilla
+        </label>
       </fieldset>
     </div>
 
-    <aside id="resumen" style="flex:1 1 320px;min-width:0;position:sticky;top:84px;background:#1d5628;color:#f6f2e8;border-radius:22px;padding:24px 22px">
+    <aside id="resumen" style="flex:1 1 320px;min-width:0;position:sticky;top:84px;background:#1d5628;color:#f6f2e8;border-radius:20px;padding:16px 16px">
       <div style="font-size:13px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#f6e81d">Vista previa</div>
-      <div id="visor" style="margin:14px 0 22px">
-        <div style="height:clamp(190px,32vh,320px);width:100%"><canvas id="gl" aria-label="Vista 3D de la placa. Arrastrá para girar, rueda o pellizco para acercar."></canvas></div>
-        <div role="group" aria-label="Vistas" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:10px">
+      <div id="visor" style="margin:8px 0 12px">
+        <div style="height:clamp(140px,24vh,240px);width:100%"><canvas id="gl" aria-label="Vista 3D de la placa. Arrastrá para girar, rueda o pellizco para acercar."></canvas></div>
+        <div role="group" aria-label="Vistas" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:6px">
           <button type="button" class="vbtn" data-view="perspectiva" aria-pressed="true">Perspectiva</button>
           <button type="button" class="vbtn" data-view="planta" aria-pressed="false">Planta</button>
           <button type="button" class="vbtn" data-view="canto" aria-pressed="false">Canto</button>
           <button type="button" class="vbtn" data-view="alveolo" aria-pressed="false">Alvéolo</button>
           <button type="button" class="vbtn" id="spinBtn" aria-pressed="false">Girar placa</button>
         </div>
-        <div style="font-size:12px;opacity:0.75;text-align:center;margin-top:8px">Arrastrá para girar · rueda o pellizco para zoom · clic derecho para mover</div>
-      </div>
+              </div>
       <div style="font-size:13px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#f6e81d">Tu mensaje</div>
-      <div id="mensaje" aria-live="polite" style="margin-top:14px;background:#f6f2e8;color:#1c261e;border-radius:16px 16px 16px 4px;padding:16px 18px;font-size:15px;line-height:1.6;white-space:pre-wrap;word-break:break-word"></div>
-      <div id="faltan" style="margin-top:14px;font-size:14px;line-height:1.5;background:rgba(0,153,25,0.75);color:#fff;border-radius:12px;padding:10px 14px"></div>
-      <a id="enviar" href={waHref} target="_blank" rel="noopener" style="margin-top:18px;display:flex;align-items:center;justify-content:center;gap:10px;background:#f6e81d;color:#1d5628;text-decoration:none;min-height:60px;border-radius:14px;font-weight:800;font-size:18px">
+      <div id="mensaje" aria-live="polite" style="margin-top:8px;background:#f6f2e8;color:#1c261e;border-radius:14px 14px 14px 4px;padding:10px 14px;font-size:13px;line-height:1.45;white-space:pre-wrap;word-break:break-word"></div>
+      <div id="faltan" style="margin-top:8px;font-size:13px;line-height:1.4;background:rgba(0,153,25,0.75);color:#fff;border-radius:12px;padding:8px 12px"></div>
+      <a id="enviar" href={waHref} target="_blank" rel="noopener" style="margin-top:10px;display:flex;align-items:center;justify-content:center;gap:10px;background:#f6e81d;color:#1d5628;text-decoration:none;min-height:48px;border-radius:14px;font-weight:800;font-size:16px">
         <span style="width:10px;height:10px;border-radius:50%;background:#1d5628"></span>Enviar pedido por WhatsApp
       </a>
-      <button type="reset" style="margin-top:10px;width:100%;background:none;border:none;color:#f6f2e8;opacity:0.8;font-size:14px;text-decoration:underline;cursor:pointer;padding:8px">Empezar de nuevo</button>
+      <button type="reset" style="margin-top:4px;width:100%;background:none;border:none;color:#f6f2e8;opacity:0.8;font-size:13px;text-decoration:underline;cursor:pointer;padding:4px">Empezar de nuevo</button>
     </aside>
   </form>
 </section>
 
 <section id="contacto" style="background:#541d1d;color:#f6f2e8">
-  <div style="max-width:1180px;margin:0 auto;padding:64px 20px">
+  <div style="max-width:1480px;margin:0 auto;padding:64px 20px">
     <h2 style="font-family:Bitter,serif;font-weight:800;font-size:clamp(30px,5vw,46px);line-height:1.06;letter-spacing:-0.015em;margin:0 0 10px;text-wrap:balance">Hablemos</h2>
     <p style="font-size:18px;line-height:1.55;margin:0 0 28px;opacity:0.9;max-width:520px">Respondemos por WhatsApp de lunes a sábado. Mandanos foto de tu placa o de tu máquina y te asesoramos.</p>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:14px">
@@ -383,13 +653,17 @@ fieldset.card:disabled{opacity:0.45}
         <span style="font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase">WhatsApp · canal principal</span>
         <span style="font-family:Bitter,serif;font-weight:800;font-size:24px">{waDisplay}</span>
       </a>
-      <a href="https://facebook.com/" target="_blank" rel="noopener" style="background:rgba(246,242,232,0.08);border:1.5px solid rgba(246,242,232,0.25);color:#f6f2e8;text-decoration:none;border-radius:18px;padding:22px;display:flex;flex-direction:column;gap:6px;min-height:130px;justify-content:space-between">
+      <a href="https://instagram.com/sembrar.placasdesiembra" target="_blank" rel="noopener" style="background:rgba(246,242,232,0.08);border:1.5px solid rgba(246,242,232,0.25);color:#f6f2e8;text-decoration:none;border-radius:18px;padding:22px;display:flex;flex-direction:column;gap:6px;min-height:130px;justify-content:space-between">
+        <span style="font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;opacity:0.85">Instagram</span>
+        <span style="font-family:Bitter,serif;font-weight:700;font-size:22px">@sembrar.placasdesiembra</span>
+      </a>
+      <a href="https://www.facebook.com/PLACASDESIEMBRA" target="_blank" rel="noopener" style="background:rgba(246,242,232,0.08);border:1.5px solid rgba(246,242,232,0.25);color:#f6f2e8;text-decoration:none;border-radius:18px;padding:22px;display:flex;flex-direction:column;gap:6px;min-height:130px;justify-content:space-between">
         <span style="font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;opacity:0.85">Facebook</span>
         <span style="font-family:Bitter,serif;font-weight:700;font-size:22px">/placasdesiembra</span>
-      </a>
-      <a href="mailto:ventas@placasdesiembra.com.ar" style="background:rgba(246,242,232,0.08);border:1.5px solid rgba(246,242,232,0.25);color:#f6f2e8;text-decoration:none;border-radius:18px;padding:22px;display:flex;flex-direction:column;gap:6px;min-height:130px;justify-content:space-between">
+      </a>  
+      <a href="mailto:placasdesiembra@gmail.com"style="background:rgba(246,242,232,0.08);border:1.5px solid rgba(246,242,232,0.25);color:#f6f2e8;text-decoration:none;border-radius:18px;padding:22px;display:flex;flex-direction:column;gap:6px;min-height:130px;justify-content:space-between">
         <span style="font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;opacity:0.85">Mail</span>
-        <span style="font-family:Bitter,serif;font-weight:700;font-size:20px;word-break:break-all">ventas@placasdesiembra.com.ar</span>
+        <span style="font-family:Bitter,serif;font-weight:700;font-size:20px;word-break:break-all">placasdesiembra@gmail.com</span>
       </a>
     </div>
   </div>
@@ -397,8 +671,17 @@ fieldset.card:disabled{opacity:0.45}
 </main>
 
 <footer style="background:#3f1515;color:rgba(246,242,232,0.8);font-size:14px">
+  <div style="max-width:1180px;margin:0 auto;padding:28px 20px 0;display:flex;flex-wrap:wrap;gap:16px 28px;align-items:center">
+    <iframe title="Mapa: Paraguay 322, Marcos Juárez" src="https://maps.google.com/maps?q=Paraguay+322,+Marcos+Ju%C3%A1rez,+C%C3%B3rdoba,+Argentina&output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" style="border:0;border-radius:14px;width:280px;max-width:100%;height:160px"></iframe>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <span style="font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;opacity:0.85">Dónde estamos</span>
+      <span style="font-family:Bitter,serif;font-weight:700;font-size:18px;color:#f6f2e8">Paraguay 322</span>
+      <span>Marcos Juárez, Córdoba, Argentina</span>
+      <a href="https://maps.google.com/?q=Paraguay+322,+Marcos+Ju%C3%A1rez,+C%C3%B3rdoba,+Argentina" target="_blank" rel="noopener" style="color:#f6f2e8;font-weight:600">Cómo llegar</a>
+    </div>
+  </div>
   <div style="max-width:1180px;margin:0 auto;padding:22px 20px 96px;display:flex;flex-wrap:wrap;gap:10px 24px;justify-content:space-between">
-    <span style="font-family:Bitter,serif;font-weight:700;color:#f6f2e8">Placas de Siembra</span>
+    <span style="font-family:Bitter,serif;font-weight:700;color:#f6f2e8">Placas de Siembra - Producto de <a style="font-family:Bitter,serif;font-weight:700;color:#f6f2e8" href="https://camposmetalurgica.com/" target="_blank">Campos metalurgica</a></span>
     <span>Placas dosificadoras para sembradoras · Argentina</span>
   </div>
 </footer>
@@ -422,15 +705,6 @@ const alvChips = document.getElementById('alv-chips')!, alvO = document.getEleme
 const hilerasLibre = document.getElementById('hileras-libre')!, hilerasFija = document.getElementById('hileras-fija')!, hilerasN = document.getElementById('hileras-n')!;
 let chipsDe: string | null = null; // semilla para la que están dibujados los chips de alvéolos
 
-let planoUrl = '';
-const MAX_PLANO = 4 * 1024 * 1024;
-const planoEstado = document.getElementById('plano-estado')!;
-const setPlano = (url: string, msg: string, ok = true) => {
-  planoUrl = url;
-  planoEstado.textContent = msg;
-  planoEstado.style.color = ok ? '#1d5628' : '#a12b2b';
-  update();
-};
 
 function update() {
   const v = (n: string) => el(n).value.trim();
@@ -509,7 +783,7 @@ function update() {
     `• Cantidad: ${cantidad} placa${cantidad === 1 ? '' : 's'}`,
   ];
   const datos = [v('nombre'), v('localidad')].filter(Boolean).join(' — ');
-  if (planoUrl) lines.push(`• Plano: ${planoUrl}`);
+  if (el('muestra').checked) lines.push('• Envío muestra de semilla');
   if (datos) lines.push('', datos);
   const mensaje = lines.join('\n');
 
@@ -567,29 +841,38 @@ form.addEventListener('input', e => {
 });
 el('cantidad').addEventListener('change', () => { el('cantidad').value = String(Math.max(1, parseInt(el('cantidad').value) || 1)); update(); });
 
-el('plano').addEventListener('change', async () => {
-  const f = el('plano').files?.[0];
-  if (!f) return setPlano('', '');
-  if (f.size > MAX_PLANO) { el('plano').value = ''; return setPlano('', 'El archivo supera los 4 MB.', false); }
-  if (!/^(application\/pdf|image\/(png|jpeg))$/.test(f.type)) { el('plano').value = ''; return setPlano('', 'Solo PDF, PNG o JPG.', false); }
-  setPlano('', 'Subiendo…');
-  try {
-    const r = await fetch('/api/plano', { method: 'POST', body: f });
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error);
-    setPlano(d.url, `Plano cargado: ${f.name}`);
-  } catch (err) {
-    el('plano').value = '';
-    setPlano('', (err as Error).message || 'No se pudo subir el archivo.', false);
-  }
-});
-
 form.addEventListener('reset', () => {
-  planoUrl = ''; planoEstado.textContent = '';
   form.querySelectorAll('[data-group]').forEach(x => x.setAttribute('aria-pressed', 'false'));
   setTimeout(update); // reset nativo aplica después del evento
 });
 form.addEventListener('submit', e => e.preventDefault());
+
+// Selector de ubicación para preguntas frecuentes
+const faqTabs = document.querySelectorAll<HTMLElement>('[data-faq-country]');
+const faqPanels = document.querySelectorAll<HTMLElement>('[data-faq-panel]');
+
+faqTabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    const country = tab.dataset.faqCountry;
+
+    faqTabs.forEach(t => {
+      t.setAttribute(
+        'aria-pressed',
+        String(t.dataset.faqCountry === country)
+      );
+    });
+
+    faqPanels.forEach(panel => {
+      panel.hidden = panel.dataset.faqPanel !== country;
+
+      if (panel.hidden) {
+        panel.querySelectorAll<HTMLDetailsElement>('details[open]').forEach(item => {
+          item.open = false;
+        });
+      }
+    });
+  });
+});
 
 update();
 </script>
